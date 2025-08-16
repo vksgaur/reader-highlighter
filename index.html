@@ -65,6 +65,15 @@
             border-left-color: #4b5563; /* gray-600 */
             color: #9ca3af; /* gray-400 */
         }
+        .favorite-btn .filled-star {
+            display: none;
+        }
+        .favorite-btn.favorited .filled-star {
+            display: block;
+        }
+        .favorite-btn.favorited .empty-star {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -245,7 +254,15 @@
             unsubscribe = onSnapshot(q, (snapshot) => {
                 loaderSidebar.style.display = 'none';
                 const articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                articles.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                
+                // Sort by favorite status first, then by creation date
+                articles.sort((a, b) => {
+                    if (a.isFavorite !== b.isFavorite) {
+                        return a.isFavorite ? -1 : 1;
+                    }
+                    return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+                });
+
                 savedArticlesList.innerHTML = '';
                 if (articles.length === 0) {
                     savedArticlesList.innerHTML = '<p class="p-4 text-sm text-gray-400 dark:text-gray-500">No articles saved yet.</p>';
@@ -259,27 +276,57 @@
                     textContainer.className = 'flex-grow overflow-hidden cursor-pointer';
                     textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p>`;
                     textContainer.addEventListener('click', () => loadArticle(article.id));
+                    
                     const controlsContainer = document.createElement('div');
-                    controlsContainer.className = 'flex flex-col items-end flex-shrink-0 ml-2';
+                    controlsContainer.className = 'flex items-center flex-shrink-0 ml-2';
+
+                    // Favorite Button
+                    const favoriteBtn = document.createElement('button');
+                    favoriteBtn.className = `favorite-btn p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ${article.isFavorite ? 'favorited' : ''}`;
+                    favoriteBtn.innerHTML = `
+                        <svg class="w-5 h-5 empty-star text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                        <svg class="w-5 h-5 filled-star text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                    `;
+                    favoriteBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(article.id, article.isFavorite || false); };
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.innerHTML = '&#x2715;';
                     deleteBtn.className = 'text-red-400 hover:text-red-600 font-bold px-2';
                     deleteBtn.onclick = (e) => { e.stopPropagation(); deleteArticle(article.id); };
+                    
+                    controlsContainer.appendChild(favoriteBtn);
+                    controlsContainer.appendChild(deleteBtn);
+
                     const viewHighlightsBtn = document.createElement('button');
                     viewHighlightsBtn.textContent = 'View Highlights';
-                    viewHighlightsBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
+                    viewHighlightsBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2 w-full';
                     viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
-                    controlsContainer.appendChild(deleteBtn);
+                    
+                    const lowerControls = document.createElement('div');
+                    lowerControls.className = 'w-full';
                     if (article.highlights && article.highlights.length > 0) {
-                        controlsContainer.appendChild(viewHighlightsBtn);
+                        lowerControls.appendChild(viewHighlightsBtn);
                     }
-                    articleEl.appendChild(textContainer);
+
+                    const articleMain = document.createElement('div');
+                    articleMain.className = 'flex-grow flex flex-col';
+                    articleMain.appendChild(textContainer);
+                    articleMain.appendChild(lowerControls);
+
+                    articleEl.appendChild(articleMain);
                     articleEl.appendChild(controlsContainer);
                     savedArticlesList.appendChild(articleEl);
                 });
             }, (error) => {
                 console.error("Error fetching articles:", error);
                 savedArticlesList.innerHTML = `<p class="p-4 text-sm text-red-500">Error: ${error.message}</p>`;
+            });
+        }
+
+        async function toggleFavorite(docId, currentStatus) {
+            const docRef = doc(db, articlesCollectionRef.path, docId);
+            await updateDoc(docRef, {
+                isFavorite: !currentStatus
             });
         }
 
@@ -349,7 +396,14 @@
                 let mainContent = doc.querySelector('article, [role="main"], #main, .main, #content, .content') || doc.body;
                 mainContent.querySelectorAll('script, style, link, nav, header, footer, aside, iframe, form, noscript').forEach(el => el.remove());
                 const title = doc.querySelector('h1')?.textContent || doc.title || 'Untitled Article';
-                const newArticleRef = await addDoc(articlesCollectionRef, { url, title, content: mainContent.innerHTML, highlights: [], createdAt: serverTimestamp() });
+                const newArticleRef = await addDoc(articlesCollectionRef, { 
+                    url, 
+                    title, 
+                    content: mainContent.innerHTML, 
+                    highlights: [], 
+                    isFavorite: false, // Initialize as not favorite
+                    createdAt: serverTimestamp() 
+                });
                 loadArticle(newArticleRef.id);
             } catch (error) {
                 console.error("Failed to fetch or parse article:", error);
