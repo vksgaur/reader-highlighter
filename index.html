@@ -274,7 +274,8 @@
                     articleEl.dataset.id = article.id;
                     const textContainer = document.createElement('div');
                     textContainer.className = 'flex-grow overflow-hidden cursor-pointer';
-                    textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p>`;
+                    const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
+                    textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p><p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${readingTimeInfo}</p>`;
                     textContainer.addEventListener('click', () => loadArticle(article.id));
                     
                     const controlsContainer = document.createElement('div');
@@ -396,12 +397,19 @@
                 let mainContent = doc.querySelector('article, [role="main"], #main, .main, #content, .content') || doc.body;
                 mainContent.querySelectorAll('script, style, link, nav, header, footer, aside, iframe, form, noscript').forEach(el => el.remove());
                 const title = doc.querySelector('h1')?.textContent || doc.title || 'Untitled Article';
+                
+                // Calculate reading time
+                const textContent = mainContent.textContent || "";
+                const wordCount = textContent.trim().split(/\s+/).length;
+                const readingTime = Math.ceil(wordCount / 200); // Average reading speed: 200 WPM
+
                 const newArticleRef = await addDoc(articlesCollectionRef, { 
                     url, 
                     title, 
                     content: mainContent.innerHTML, 
                     highlights: [], 
-                    isFavorite: false, // Initialize as not favorite
+                    isFavorite: false,
+                    readingTime: readingTime,
                     createdAt: serverTimestamp() 
                 });
                 loadArticle(newArticleRef.id);
