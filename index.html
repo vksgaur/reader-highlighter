@@ -104,6 +104,9 @@
                 </div>
                 <div id="user-info" class="mt-3 text-sm text-gray-600 dark:text-gray-400 flex items-center"></div>
             </div>
+            <div id="tag-filters" class="p-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap gap-2">
+                <!-- Tag filter buttons will be inserted here -->
+            </div>
             <div id="saved-articles-list" class="flex-grow overflow-y-auto p-2">
                 <div id="loader-sidebar" class="p-4 text-center text-gray-500 dark:text-gray-400">Loading articles...</div>
             </div>
@@ -155,7 +158,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // UI Element References
         const loginView = document.getElementById('login-view');
@@ -178,6 +181,7 @@
         const themeToggleBtn = document.getElementById('theme-toggle');
         const lightIcon = document.getElementById('theme-toggle-light-icon');
         const darkIcon = document.getElementById('theme-toggle-dark-icon');
+        const tagFiltersContainer = document.getElementById('tag-filters');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -198,6 +202,7 @@
 
         let userId, articlesCollectionRef, unsubscribe;
         let currentArticleId = null;
+        let activeTagFilter = null;
 
         // --- Authentication Logic ---
         
@@ -219,7 +224,6 @@
                 loginView.classList.add('hidden');
                 appView.classList.remove('hidden');
                 
-                // Display user info
                 userInfo.innerHTML = `
                     <img src="${user.photoURL}" alt="User Photo" class="w-6 h-6 rounded-full mr-2">
                     <span class="flex-grow truncate font-semibold">${user.displayName}</span>
@@ -227,7 +231,6 @@
                 `;
                 document.getElementById('sign-out-btn').addEventListener('click', signOutUser);
 
-                // Setup Firestore
                 articlesCollectionRef = collection(db, `artifacts/read-highlight-app/users/${userId}/articles`);
                 setupFirestoreListeners();
             } else {
@@ -236,13 +239,12 @@
                 appView.classList.add('hidden');
                 loginView.classList.remove('hidden');
                 
-                // Clean up UI
                 userInfo.innerHTML = 'Not signed in.';
                 savedArticlesList.innerHTML = '';
                 articleContent.innerHTML = '';
                 placeholder.style.display = 'block';
                 if (unsubscribe) {
-                    unsubscribe(); // Detach the old listener
+                    unsubscribe(); 
                 }
             }
         });
@@ -252,83 +254,150 @@
         function setupFirestoreListeners() {
             const q = query(articlesCollectionRef);
             unsubscribe = onSnapshot(q, (snapshot) => {
-                loaderSidebar.style.display = 'none';
-                const articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Sort by favorite status first, then by creation date
-                articles.sort((a, b) => {
-                    if (a.isFavorite !== b.isFavorite) {
-                        return a.isFavorite ? -1 : 1;
-                    }
-                    return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
-                });
-
-                savedArticlesList.innerHTML = '';
-                if (articles.length === 0) {
-                    savedArticlesList.innerHTML = '<p class="p-4 text-sm text-gray-400 dark:text-gray-500">No articles saved yet.</p>';
-                    return;
-                }
-                articles.forEach(article => {
-                    const articleEl = document.createElement('div');
-                    articleEl.className = `p-3 m-1 rounded-lg border-2 flex justify-between items-start ${article.id === currentArticleId ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-500' : 'bg-white dark:bg-gray-800 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`;
-                    articleEl.dataset.id = article.id;
-                    
-                    // --- Left Column (grows) ---
-                    const leftColumn = document.createElement('div');
-                    leftColumn.className = 'flex-grow overflow-hidden mr-2';
-
-                    const textContainer = document.createElement('div');
-                    textContainer.className = 'cursor-pointer';
-                    const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
-                    textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p><p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${readingTimeInfo}</p>`;
-                    textContainer.addEventListener('click', () => loadArticle(article.id));
-                    
-                    leftColumn.appendChild(textContainer);
-
-                    if (article.highlights && article.highlights.length > 0) {
-                        const viewHighlightsBtn = document.createElement('button');
-                        viewHighlightsBtn.textContent = 'View Highlights';
-                        viewHighlightsBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
-                        viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
-                        leftColumn.appendChild(viewHighlightsBtn);
-                    }
-
-                    // --- Right Column (fixed size) ---
-                    const rightColumn = document.createElement('div');
-                    rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2';
-
-                    const favoriteBtn = document.createElement('button');
-                    favoriteBtn.className = `favorite-btn p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ${article.isFavorite ? 'favorited' : ''}`;
-                    favoriteBtn.innerHTML = `
-                        <svg class="w-5 h-5 empty-star text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-                        <svg class="w-5 h-5 filled-star text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-                    `;
-                    favoriteBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(article.id, article.isFavorite || false); };
-
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.innerHTML = '&#x2715;';
-                    deleteBtn.className = 'text-red-400 hover:text-red-600 font-bold px-2';
-                    deleteBtn.onclick = (e) => { e.stopPropagation(); deleteArticle(article.id); };
-                    
-                    rightColumn.appendChild(favoriteBtn);
-                    rightColumn.appendChild(deleteBtn);
-                    
-                    // --- Assemble ---
-                    articleEl.appendChild(leftColumn);
-                    articleEl.appendChild(rightColumn);
-                    savedArticlesList.appendChild(articleEl);
-                });
+                const allArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderSidebar(allArticles);
             }, (error) => {
                 console.error("Error fetching articles:", error);
                 savedArticlesList.innerHTML = `<p class="p-4 text-sm text-red-500">Error: ${error.message}</p>`;
             });
         }
 
-        async function toggleFavorite(docId, currentStatus) {
+        function renderSidebar(allArticles) {
+            loaderSidebar.style.display = 'none';
+
+            // Filter articles if a tag is selected
+            const filteredArticles = activeTagFilter 
+                ? allArticles.filter(article => (article.tags || []).includes(activeTagFilter))
+                : allArticles;
+
+            // Sort by favorite status first, then by creation date
+            filteredArticles.sort((a, b) => {
+                if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+                return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+            });
+
+            // Render Tag Filters
+            const allTags = new Set(allArticles.flatMap(article => article.tags || []));
+            tagFiltersContainer.innerHTML = '';
+            const allBtn = document.createElement('button');
+            allBtn.textContent = 'All';
+            allBtn.className = `px-2 py-1 text-xs rounded-md ${!activeTagFilter ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`;
+            allBtn.onclick = () => {
+                activeTagFilter = null;
+                renderSidebar(allArticles);
+            };
+            tagFiltersContainer.appendChild(allBtn);
+
+            allTags.forEach(tag => {
+                const tagBtn = document.createElement('button');
+                tagBtn.textContent = tag;
+                tagBtn.className = `px-2 py-1 text-xs rounded-md ${activeTagFilter === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`;
+                tagBtn.onclick = () => {
+                    activeTagFilter = tag;
+                    renderSidebar(allArticles);
+                };
+                tagFiltersContainer.appendChild(tagBtn);
+            });
+
+            // Render Article List
+            savedArticlesList.innerHTML = '';
+            if (filteredArticles.length === 0) {
+                savedArticlesList.innerHTML = `<p class="p-4 text-sm text-gray-400 dark:text-gray-500">${activeTagFilter ? `No articles with tag "${activeTagFilter}".` : 'No articles saved yet.'}</p>`;
+                return;
+            }
+
+            filteredArticles.forEach(article => {
+                const articleEl = document.createElement('div');
+                articleEl.className = `p-3 m-1 rounded-lg border-2 flex justify-between items-start ${article.id === currentArticleId ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-500' : 'bg-white dark:bg-gray-800 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`;
+                articleEl.dataset.id = article.id;
+                
+                const leftColumn = document.createElement('div');
+                leftColumn.className = 'flex-grow overflow-hidden mr-2';
+
+                const textContainer = document.createElement('div');
+                textContainer.className = 'cursor-pointer';
+                const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
+                textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p><p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${readingTimeInfo}</p>`;
+                textContainer.addEventListener('click', () => loadArticle(article.id));
+                
+                leftColumn.appendChild(textContainer);
+
+                // Tags display
+                const tagsContainer = document.createElement('div');
+                tagsContainer.className = 'mt-2 flex flex-wrap gap-1';
+                (article.tags || []).forEach(tag => {
+                    const tagEl = document.createElement('span');
+                    tagEl.className = 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold px-2 py-0.5 rounded-full';
+                    tagEl.textContent = tag;
+                    tagsContainer.appendChild(tagEl);
+                });
+                leftColumn.appendChild(tagsContainer);
+
+                const addTagContainer = document.createElement('div');
+                addTagContainer.className = 'mt-2';
+                const addTagBtn = document.createElement('button');
+                addTagBtn.textContent = '+ Add Tag';
+                addTagBtn.className = 'text-xs text-blue-500 hover:underline';
+                addTagBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const tagInput = document.createElement('input');
+                    tagInput.type = 'text';
+                    tagInput.placeholder = 'Enter tag...';
+                    tagInput.className = 'text-xs border rounded px-1 py-0.5 dark:bg-gray-700';
+                    tagInput.onkeydown = async (event) => {
+                        if (event.key === 'Enter' && tagInput.value.trim()) {
+                            await addTag(article.id, tagInput.value.trim());
+                            addTagContainer.innerHTML = ''; // Reset
+                            addTagContainer.appendChild(addTagBtn);
+                        }
+                    };
+                    addTagContainer.innerHTML = '';
+                    addTagContainer.appendChild(tagInput);
+                    tagInput.focus();
+                };
+                addTagContainer.appendChild(addTagBtn);
+                leftColumn.appendChild(addTagContainer);
+
+                if (article.highlights && article.highlights.length > 0) {
+                    const viewHighlightsBtn = document.createElement('button');
+                    viewHighlightsBtn.textContent = 'View Highlights';
+                    viewHighlightsBtn.className = 'text-xs w-full text-left bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
+                    viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
+                    leftColumn.appendChild(viewHighlightsBtn);
+                }
+
+                const rightColumn = document.createElement('div');
+                rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2';
+
+                const favoriteBtn = document.createElement('button');
+                favoriteBtn.className = `favorite-btn p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ${article.isFavorite ? 'favorited' : ''}`;
+                favoriteBtn.innerHTML = `<svg class="w-5 h-5 empty-star text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg><svg class="w-5 h-5 filled-star text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>`;
+                favoriteBtn.onclick = (e) => { e.stopPropagation(); toggleFavorite(article.id, article.isFavorite || false); };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '&#x2715;';
+                deleteBtn.className = 'text-red-400 hover:text-red-600 font-bold px-2';
+                deleteBtn.onclick = (e) => { e.stopPropagation(); deleteArticle(article.id); };
+                
+                rightColumn.appendChild(favoriteBtn);
+                rightColumn.appendChild(deleteBtn);
+                
+                articleEl.appendChild(leftColumn);
+                articleEl.appendChild(rightColumn);
+                savedArticlesList.appendChild(articleEl);
+            });
+        }
+
+        async function addTag(docId, tag) {
             const docRef = doc(db, articlesCollectionRef.path, docId);
             await updateDoc(docRef, {
-                isFavorite: !currentStatus
+                tags: arrayUnion(tag)
             });
+        }
+
+        async function toggleFavorite(docId, currentStatus) {
+            const docRef = doc(db, articlesCollectionRef.path, docId);
+            await updateDoc(docRef, { isFavorite: !currentStatus });
         }
 
         async function loadArticle(docId) {
@@ -398,10 +467,9 @@
                 mainContent.querySelectorAll('script, style, link, nav, header, footer, aside, iframe, form, noscript').forEach(el => el.remove());
                 const title = doc.querySelector('h1')?.textContent || doc.title || 'Untitled Article';
                 
-                // Calculate reading time
                 const textContent = mainContent.textContent || "";
                 const wordCount = textContent.trim().split(/\s+/).length;
-                const readingTime = Math.ceil(wordCount / 200); // Average reading speed: 200 WPM
+                const readingTime = Math.ceil(wordCount / 200);
 
                 const newArticleRef = await addDoc(articlesCollectionRef, { 
                     url, 
@@ -410,6 +478,7 @@
                     highlights: [], 
                     isFavorite: false,
                     readingTime: readingTime,
+                    tags: [], // Initialize with empty tags array
                     createdAt: serverTimestamp() 
                 });
                 loadArticle(newArticleRef.id);
