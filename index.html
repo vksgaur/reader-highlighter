@@ -151,8 +151,11 @@
     <div id="highlights-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Highlights</h2>
-                <button id="close-modal-btn" class="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-2xl">&times;</button>
+                <h2 id="highlights-modal-title" class="text-xl font-bold text-gray-900 dark:text-white truncate pr-4">Highlights</h2>
+                <div class="flex items-center gap-4">
+                    <button id="export-highlights-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Export as .txt</button>
+                    <button id="close-modal-btn" class="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-2xl">&times;</button>
+                </div>
             </div>
             <div id="highlights-list" class="p-6 overflow-y-auto">
                 <!-- Highlights will be dynamically inserted here -->
@@ -190,6 +193,7 @@
         const tagFiltersContainer = document.getElementById('tag-filters');
         const viewActiveBtn = document.getElementById('view-active-btn');
         const viewArchivedBtn = document.getElementById('view-archived-btn');
+        const highlightsModalTitle = document.getElementById('highlights-modal-title');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -272,21 +276,16 @@
         function renderSidebar(allArticles) {
             loaderSidebar.style.display = 'none';
 
-            // Filter by archive status
             const viewableArticles = allArticles.filter(article => (article.isArchived || false) === isShowingArchived);
-
-            // Filter by tag if a tag is selected
             const filteredArticles = activeTagFilter 
                 ? viewableArticles.filter(article => (article.tags || []).includes(activeTagFilter))
                 : viewableArticles;
 
-            // Sort by favorite status first, then by creation date
             filteredArticles.sort((a, b) => {
                 if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
                 return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
             });
 
-            // Render Tag Filters
             const allTags = new Set(viewableArticles.flatMap(article => article.tags || []));
             tagFiltersContainer.innerHTML = '';
             const allBtn = document.createElement('button');
@@ -309,7 +308,6 @@
                 tagFiltersContainer.appendChild(tagBtn);
             });
 
-            // Render Article List
             savedArticlesList.innerHTML = '';
             if (filteredArticles.length === 0) {
                 let emptyMessage = isShowingArchived ? 'No archived articles.' : 'No active articles.';
@@ -336,7 +334,6 @@
                 
                 leftColumn.appendChild(textContainer);
 
-                // Tags display
                 const tagsContainer = document.createElement('div');
                 tagsContainer.className = 'mt-2 flex flex-wrap gap-1';
                 (article.tags || []).forEach(tag => {
@@ -374,7 +371,7 @@
                     const viewHighlightsBtn = document.createElement('button');
                     viewHighlightsBtn.textContent = 'View Highlights';
                     viewHighlightsBtn.className = 'text-xs w-full text-left bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
-                    viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
+                    viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || [], article.title || 'Untitled Article'); };
                     leftColumn.appendChild(viewHighlightsBtn);
                 }
 
@@ -505,7 +502,7 @@
                     content: mainContent.innerHTML, 
                     highlights: [], 
                     isFavorite: false,
-                    isArchived: false, // Initialize as not archived
+                    isArchived: false,
                     readingTime: readingTime,
                     tags: [],
                     createdAt: serverTimestamp() 
@@ -582,7 +579,8 @@
         }
 
         // --- Highlights Modal Logic ---
-        function showHighlightsModal(highlights) {
+        function showHighlightsModal(highlights, articleTitle) {
+            highlightsModalTitle.textContent = `Highlights for "${articleTitle}"`;
             highlightsList.innerHTML = '';
             if (highlights.length === 0) {
                 highlightsList.innerHTML = '<p class="text-gray-500 dark:text-gray-400">No highlights for this article yet.</p>';
@@ -597,9 +595,45 @@
                 });
                 highlightsList.appendChild(list);
             }
+            setupExportButton(highlights, articleTitle);
             highlightsModal.classList.remove('hidden');
             highlightsModal.classList.add('flex');
         }
+
+        function setupExportButton(highlights, articleTitle) {
+            const exportBtn = document.getElementById('export-highlights-btn');
+            const newExportBtn = exportBtn.cloneNode(true);
+            exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+
+            if (highlights.length === 0) {
+                newExportBtn.disabled = true;
+                newExportBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                return;
+            }
+
+            newExportBtn.disabled = false;
+            newExportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            newExportBtn.addEventListener('click', () => {
+                let content = `Highlights for: ${articleTitle}\n\n`;
+                content += "========================================\n\n";
+                highlights.forEach(h => {
+                    content += `- ${h.text}\n\n`;
+                });
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const safeFilename = articleTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                a.download = `highlights_${safeFilename}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
+
         function hideHighlightsModal() {
             highlightsModal.classList.add('hidden');
             highlightsModal.classList.remove('flex');
