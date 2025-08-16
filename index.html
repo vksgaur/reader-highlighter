@@ -272,16 +272,31 @@
                     const articleEl = document.createElement('div');
                     articleEl.className = `p-3 m-1 rounded-lg border-2 flex justify-between items-start ${article.id === currentArticleId ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-500' : 'bg-white dark:bg-gray-800 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`;
                     articleEl.dataset.id = article.id;
+                    
+                    // --- Left Column (grows) ---
+                    const leftColumn = document.createElement('div');
+                    leftColumn.className = 'flex-grow overflow-hidden mr-2';
+
                     const textContainer = document.createElement('div');
-                    textContainer.className = 'flex-grow overflow-hidden cursor-pointer';
+                    textContainer.className = 'cursor-pointer';
                     const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
                     textContainer.innerHTML = `<h3 class="font-semibold text-gray-800 dark:text-gray-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-gray-500 dark:text-gray-400 truncate">${article.url}</p><p class="text-xs text-gray-400 dark:text-gray-500 mt-1">${readingTimeInfo}</p>`;
                     textContainer.addEventListener('click', () => loadArticle(article.id));
                     
-                    const controlsContainer = document.createElement('div');
-                    controlsContainer.className = 'flex items-center flex-shrink-0 ml-2';
+                    leftColumn.appendChild(textContainer);
 
-                    // Favorite Button
+                    if (article.highlights && article.highlights.length > 0) {
+                        const viewHighlightsBtn = document.createElement('button');
+                        viewHighlightsBtn.textContent = 'View Highlights';
+                        viewHighlightsBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
+                        viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
+                        leftColumn.appendChild(viewHighlightsBtn);
+                    }
+
+                    // --- Right Column (fixed size) ---
+                    const rightColumn = document.createElement('div');
+                    rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2';
+
                     const favoriteBtn = document.createElement('button');
                     favoriteBtn.className = `favorite-btn p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 ${article.isFavorite ? 'favorited' : ''}`;
                     favoriteBtn.innerHTML = `
@@ -295,27 +310,12 @@
                     deleteBtn.className = 'text-red-400 hover:text-red-600 font-bold px-2';
                     deleteBtn.onclick = (e) => { e.stopPropagation(); deleteArticle(article.id); };
                     
-                    controlsContainer.appendChild(favoriteBtn);
-                    controlsContainer.appendChild(deleteBtn);
-
-                    const viewHighlightsBtn = document.createElement('button');
-                    viewHighlightsBtn.textContent = 'View Highlights';
-                    viewHighlightsBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2 w-full';
-                    viewHighlightsBtn.onclick = (e) => { e.stopPropagation(); showHighlightsModal(article.highlights || []); };
+                    rightColumn.appendChild(favoriteBtn);
+                    rightColumn.appendChild(deleteBtn);
                     
-                    const lowerControls = document.createElement('div');
-                    lowerControls.className = 'w-full';
-                    if (article.highlights && article.highlights.length > 0) {
-                        lowerControls.appendChild(viewHighlightsBtn);
-                    }
-
-                    const articleMain = document.createElement('div');
-                    articleMain.className = 'flex-grow flex flex-col';
-                    articleMain.appendChild(textContainer);
-                    articleMain.appendChild(lowerControls);
-
-                    articleEl.appendChild(articleMain);
-                    articleEl.appendChild(controlsContainer);
+                    // --- Assemble ---
+                    articleEl.appendChild(leftColumn);
+                    articleEl.appendChild(rightColumn);
                     savedArticlesList.appendChild(articleEl);
                 });
             }, (error) => {
