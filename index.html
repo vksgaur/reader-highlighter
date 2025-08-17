@@ -107,8 +107,11 @@
                 </div>
                 <div id="user-info" class="mt-3 text-sm text-gray-600 dark:text-gray-400 flex items-center"></div>
             </div>
-            <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+            <div class="p-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
                 <input type="search" id="search-input" placeholder="Search articles..." class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 rounded-md">
+                <button id="surprise-me-btn" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600" title="Open a random article">
+                    <svg class="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
             </div>
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <div id="view-toggle" class="flex w-full rounded-md bg-gray-200 dark:bg-gray-700 p-1">
@@ -202,8 +205,9 @@
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h2 id="highlights-modal-title" class="text-xl font-bold text-gray-900 dark:text-white truncate pr-4">Highlights</h2>
-                <div class="flex items-center gap-4">
-                    <button id="export-highlights-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Export as .txt</button>
+                <div class="flex items-center gap-2">
+                    <button id="export-txt-btn" class="text-sm bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Export .txt</button>
+                    <button id="export-md-btn" class="text-sm bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Export .md</button>
                     <button id="close-modal-btn" class="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-2xl">&times;</button>
                 </div>
             </div>
@@ -275,6 +279,7 @@
         const saveNoteBtn = document.getElementById('save-note-btn');
         const cancelNoteBtn = document.getElementById('cancel-note-btn');
         const searchInput = document.getElementById('search-input');
+        const surpriseMeBtn = document.getElementById('surprise-me-btn');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -761,7 +766,7 @@
                 });
                 highlightsList.appendChild(list);
             }
-            setupExportButton(highlights, articleTitle);
+            setupExportButtons(highlights, articleTitle);
             highlightsModal.classList.remove('hidden');
             highlightsModal.classList.add('flex');
         }
@@ -797,42 +802,60 @@
             }
         }
 
-        function setupExportButton(highlights, articleTitle) {
-            const exportBtn = document.getElementById('export-highlights-btn');
-            const newExportBtn = exportBtn.cloneNode(true);
-            exportBtn.parentNode.replaceChild(newExportBtn, exportBtn);
+        function setupExportButtons(highlights, articleTitle) {
+            const exportTxtBtn = document.getElementById('export-txt-btn');
+            const exportMdBtn = document.getElementById('export-md-btn');
+            
+            const setupButton = (btn, format) => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
 
-            if (highlights.length === 0) {
-                newExportBtn.disabled = true;
-                newExportBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                return;
-            }
+                if (highlights.length === 0) {
+                    newBtn.disabled = true;
+                    newBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
 
-            newExportBtn.disabled = false;
-            newExportBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                newBtn.disabled = false;
+                newBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
-            newExportBtn.addEventListener('click', () => {
-                let content = `Highlights for: ${articleTitle}\n\n`;
-                content += "========================================\n\n";
-                highlights.forEach(h => {
-                    content += `- ${h.text}\n`;
-                    if (h.note) {
-                        content += `  Note: ${h.note}\n`;
+                newBtn.addEventListener('click', () => {
+                    let content = ``;
+                    let fileExtension = '';
+
+                    if (format === 'txt') {
+                        content = `Highlights for: ${articleTitle}\n\n========================================\n\n`;
+                        highlights.forEach(h => {
+                            content += `- ${h.text}\n`;
+                            if (h.note) content += `  Note: ${h.note}\n`;
+                            content += '\n';
+                        });
+                        fileExtension = '.txt';
+                    } else if (format === 'md') {
+                        content = `# Highlights for: ${articleTitle}\n\n`;
+                        highlights.forEach(h => {
+                            content += `> ${h.text}\n`;
+                            if (h.note) content += `\n- *${h.note}*\n`;
+                            content += `\n---\n\n`;
+                        });
+                        fileExtension = '.md';
                     }
-                    content += '\n';
-                });
 
-                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const safeFilename = articleTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                a.download = `highlights_${safeFilename}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            });
+                    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const safeFilename = articleTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    a.download = `highlights_${safeFilename}${fileExtension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                });
+            };
+
+            setupButton(exportTxtBtn, 'txt');
+            setupButton(exportMdBtn, 'md');
         }
 
         function hideHighlightsModal() {
@@ -1014,6 +1037,18 @@
         // --- Search Logic ---
         searchInput.addEventListener('input', () => {
             renderSidebar();
+        });
+
+        // --- Surprise Me Logic ---
+        surpriseMeBtn.addEventListener('click', () => {
+            const activeArticles = allUserArticles.filter(article => !article.isArchived);
+            if (activeArticles.length > 0) {
+                const randomIndex = Math.floor(Math.random() * activeArticles.length);
+                const randomArticle = activeArticles[randomIndex];
+                loadArticle(randomArticle.id);
+            } else {
+                alert("No active articles to choose from!");
+            }
         });
 
         // --- Start the App ---
