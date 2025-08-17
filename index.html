@@ -335,11 +335,20 @@
                 leftColumn.appendChild(textContainer);
 
                 const tagsContainer = document.createElement('div');
-                tagsContainer.className = 'mt-2 flex flex-wrap gap-1';
+                tagsContainer.className = 'mt-2 flex flex-wrap gap-1 items-center';
                 (article.tags || []).forEach(tag => {
                     const tagEl = document.createElement('span');
-                    tagEl.className = 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold px-2 py-0.5 rounded-full';
+                    tagEl.className = 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-semibold pl-2 pr-1 py-0.5 rounded-full inline-flex items-center';
                     tagEl.textContent = tag;
+
+                    const removeTagBtn = document.createElement('button');
+                    removeTagBtn.innerHTML = '&times;';
+                    removeTagBtn.className = 'ml-1.5 text-xs hover:text-red-500';
+                    removeTagBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        removeTag(article.id, tag);
+                    };
+                    tagEl.appendChild(removeTagBtn);
                     tagsContainer.appendChild(tagEl);
                 });
                 leftColumn.appendChild(tagsContainer);
@@ -408,6 +417,11 @@
         async function addTag(docId, tag) {
             const docRef = doc(db, articlesCollectionRef.path, docId);
             await updateDoc(docRef, { tags: arrayUnion(tag) });
+        }
+
+        async function removeTag(docId, tag) {
+            const docRef = doc(db, articlesCollectionRef.path, docId);
+            await updateDoc(docRef, { tags: arrayRemove(tag) });
         }
 
         async function toggleFavorite(docId, currentStatus) {
@@ -589,8 +603,18 @@
                 list.className = 'space-y-4';
                 highlights.forEach(h => {
                     const item = document.createElement('li');
-                    item.className = 'border-l-4 border-yellow-400 pl-4';
-                    item.textContent = h.text;
+                    item.className = 'border-l-4 border-yellow-400 pl-4 flex justify-between items-center';
+                    
+                    const textSpan = document.createElement('span');
+                    textSpan.textContent = h.text;
+                    item.appendChild(textSpan);
+
+                    const copyBtn = document.createElement('button');
+                    copyBtn.textContent = 'Copy';
+                    copyBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded ml-4';
+                    copyBtn.onclick = () => copyHighlightToClipboard(h.text, copyBtn);
+                    item.appendChild(copyBtn);
+
                     list.appendChild(item);
                 });
                 highlightsList.appendChild(list);
@@ -598,6 +622,38 @@
             setupExportButton(highlights, articleTitle);
             highlightsModal.classList.remove('hidden');
             highlightsModal.classList.add('flex');
+        }
+
+        function copyHighlightToClipboard(text, button) {
+            // Use a fallback for environments where navigator.clipboard might be restricted (like some iframes)
+            const fallbackCopy = (textToCopy) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                textArea.style.position = "fixed"; // Avoid scrolling to bottom
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    button.textContent = 'Copied!';
+                    setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            };
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    button.textContent = 'Copied!';
+                    setTimeout(() => { button.textContent = 'Copy'; }, 2000);
+                }, (err) => {
+                    console.error('Async clipboard copy failed', err);
+                    fallbackCopy(text); // Try fallback if promise rejects
+                });
+            } else {
+                fallbackCopy(text);
+            }
         }
 
         function setupExportButton(highlights, articleTitle) {
@@ -621,7 +677,7 @@
                     content += `- ${h.text}\n\n`;
                 });
 
-                const blob = new Blob([content], { type: 'text/plain' });
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
