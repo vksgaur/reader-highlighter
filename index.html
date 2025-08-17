@@ -235,6 +235,10 @@
             </div>
         </div>
     </div>
+    
+    <!-- Hidden container for generating highlight images -->
+    <div id="image-export-container" class="fixed top-0 left-0 -translate-x-full bg-white p-8"></div>
+
 
     <!-- Firebase SDK -->
     <script type="module">
@@ -281,6 +285,7 @@
         const cancelNoteBtn = document.getElementById('cancel-note-btn');
         const searchInput = document.getElementById('search-input');
         const surpriseMeBtn = document.getElementById('surprise-me-btn');
+        const imageExportContainer = document.getElementById('image-export-container');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -757,11 +762,22 @@
                         item.appendChild(noteText);
                     }
 
+                    const controls = document.createElement('div');
+                    controls.className = 'mt-2 flex gap-2';
+
                     const copyBtn = document.createElement('button');
                     copyBtn.textContent = 'Copy';
-                    copyBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
+                    copyBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded';
                     copyBtn.onclick = () => copyHighlightToClipboard(h.text, copyBtn);
-                    item.appendChild(copyBtn);
+                    
+                    const shareBtn = document.createElement('button');
+                    shareBtn.textContent = 'Share';
+                    shareBtn.className = 'text-xs bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-2 rounded';
+                    shareBtn.onclick = () => shareHighlightAsImage(h, articleTitle);
+
+                    controls.appendChild(copyBtn);
+                    controls.appendChild(shareBtn);
+                    item.appendChild(controls);
 
                     list.appendChild(item);
                 });
@@ -770,6 +786,31 @@
             setupExportButtons(highlights, articleTitle);
             highlightsModal.classList.remove('hidden');
             highlightsModal.classList.add('flex');
+        }
+
+        async function shareHighlightAsImage(highlight, articleTitle) {
+            imageExportContainer.innerHTML = `
+                <div class="w-[400px] p-6 bg-white rounded-lg shadow-lg">
+                    <p class="text-lg font-serif">"${highlight.text}"</p>
+                    ${highlight.note ? `<p class="mt-4 text-sm text-gray-600 italic">- ${highlight.note}</p>` : ''}
+                    <p class="mt-6 text-xs text-gray-500 text-right">From: ${articleTitle}</p>
+                </div>
+            `;
+            
+            try {
+                const canvas = await html2canvas(imageExportContainer.firstElementChild);
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL('image/png');
+                const safeFilename = `highlight_${Date.now()}.png`;
+                a.download = safeFilename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('Sorry, could not generate image.');
+            }
+            imageExportContainer.innerHTML = '';
         }
 
         function copyHighlightToClipboard(text, button) {
