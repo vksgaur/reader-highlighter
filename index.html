@@ -237,7 +237,7 @@
     </div>
     
     <!-- Hidden container for generating highlight images -->
-    <div id="image-export-container" class="fixed top-0 left-0 -translate-x-full bg-white p-8"></div>
+    <div id="image-export-container" class="fixed top-0 left-0 -translate-x-full"></div>
 
 
     <!-- Firebase SDK -->
@@ -790,10 +790,10 @@
 
         async function shareHighlightAsImage(highlight, articleTitle) {
             imageExportContainer.innerHTML = `
-                <div class="w-[400px] p-6 bg-white rounded-lg shadow-lg">
-                    <p class="text-lg font-serif">"${highlight.text}"</p>
-                    ${highlight.note ? `<p class="mt-4 text-sm text-gray-600 italic">- ${highlight.note}</p>` : ''}
-                    <p class="mt-6 text-xs text-gray-500 text-right">From: ${articleTitle}</p>
+                <div class="w-[500px] h-[500px] p-10 bg-gradient-to-br from-gray-700 via-gray-900 to-black text-white font-serif flex flex-col justify-center">
+                    <p class="text-3xl leading-snug">“${highlight.text}”</p>
+                    ${highlight.note ? `<p class="mt-6 text-lg text-gray-300 italic">- ${highlight.note}</p>` : ''}
+                    <p class="mt-8 text-sm text-gray-400 text-right">From: ${articleTitle}</p>
                 </div>
             `;
             
