@@ -51,7 +51,7 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         /* Styles for the highlights modal */
-        #highlights-modal {
+        #highlights-modal, #add-note-modal {
             transition: opacity 0.3s ease;
         }
         /* Ensure prose styles adapt to dark mode */
@@ -106,6 +106,9 @@
                     </button>
                 </div>
                 <div id="user-info" class="mt-3 text-sm text-gray-600 dark:text-gray-400 flex items-center"></div>
+            </div>
+            <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                <input type="search" id="search-input" placeholder="Search articles..." class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 rounded-md">
             </div>
             <div class="p-2 border-b border-gray-200 dark:border-gray-700">
                 <div id="view-toggle" class="flex w-full rounded-md bg-gray-200 dark:bg-gray-700 p-1">
@@ -210,6 +213,24 @@
         </div>
     </div>
 
+    <!-- Modal for adding a note to a highlight -->
+    <div id="add-note-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Add Note</h2>
+            </div>
+            <div class="p-6">
+                <p class="mb-2 text-sm text-gray-600 dark:text-gray-300">Highlight:</p>
+                <blockquote id="note-highlight-context" class="mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded border-l-4 border-yellow-400 text-gray-800 dark:text-gray-200"></blockquote>
+                <textarea id="note-textarea" rows="4" class="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700" placeholder="Write your note here..."></textarea>
+            </div>
+            <div class="p-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button id="cancel-note-btn" class="px-4 py-2 rounded text-sm font-semibold bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
+                <button id="save-note-btn" class="px-4 py-2 rounded text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -248,6 +269,12 @@
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const sidebarToggleIcon = document.getElementById('sidebar-toggle-icon');
         const progressBar = document.getElementById('progress-bar');
+        const addNoteModal = document.getElementById('add-note-modal');
+        const noteHighlightContext = document.getElementById('note-highlight-context');
+        const noteTextarea = document.getElementById('note-textarea');
+        const saveNoteBtn = document.getElementById('save-note-btn');
+        const cancelNoteBtn = document.getElementById('cancel-note-btn');
+        const searchInput = document.getElementById('search-input');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -267,9 +294,11 @@
         const provider = new GoogleAuthProvider();
 
         let userId, articlesCollectionRef, unsubscribe;
+        let allUserArticles = []; // Cache for all articles
         let currentArticleId = null;
         let activeTagFilter = null;
         let isShowingArchived = false;
+        let currentSelection = null;
 
         // --- Authentication Logic ---
         
@@ -319,35 +348,53 @@
         function setupFirestoreListeners() {
             const q = query(articlesCollectionRef);
             unsubscribe = onSnapshot(q, (snapshot) => {
-                const allArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderSidebar(allArticles);
+                allUserArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderSidebar();
             }, (error) => {
                 console.error("Error fetching articles:", error);
                 savedArticlesList.innerHTML = `<p class="p-4 text-sm text-red-500">Error: ${error.message}</p>`;
             });
         }
 
-        function renderSidebar(allArticles) {
+        function renderSidebar() {
             loaderSidebar.style.display = 'none';
 
-            const viewableArticles = allArticles.filter(article => (article.isArchived || false) === isShowingArchived);
-            const filteredArticles = activeTagFilter 
-                ? viewableArticles.filter(article => (article.tags || []).includes(activeTagFilter))
-                : viewableArticles;
+            let articlesToDisplay = [...allUserArticles];
 
-            filteredArticles.sort((a, b) => {
+            // Filter by archive status
+            articlesToDisplay = articlesToDisplay.filter(article => (article.isArchived || false) === isShowingArchived);
+
+            // Filter by search term
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            if (searchTerm) {
+                articlesToDisplay = articlesToDisplay.filter(article => {
+                    const titleMatch = (article.title || '').toLowerCase().includes(searchTerm);
+                    const contentMatch = (article.content || '').toLowerCase().includes(searchTerm);
+                    return titleMatch || contentMatch;
+                });
+            }
+
+            // Filter by tag if a tag is selected
+            if (activeTagFilter) {
+                articlesToDisplay = articlesToDisplay.filter(article => (article.tags || []).includes(activeTagFilter));
+            }
+
+            // Sort by favorite status first, then by creation date
+            articlesToDisplay.sort((a, b) => {
                 if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
                 return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
             });
 
-            const allTags = new Set(viewableArticles.flatMap(article => article.tags || []));
+            // Render Tag Filters based on currently viewable (active/archived) articles
+            const viewableArticlesForTags = allUserArticles.filter(article => (article.isArchived || false) === isShowingArchived);
+            const allTags = new Set(viewableArticlesForTags.flatMap(article => article.tags || []));
             tagFiltersContainer.innerHTML = '';
             const allBtn = document.createElement('button');
             allBtn.textContent = 'All';
             allBtn.className = `px-2 py-1 text-xs rounded-md ${!activeTagFilter ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`;
             allBtn.onclick = () => {
                 activeTagFilter = null;
-                renderSidebar(allArticles);
+                renderSidebar();
             };
             tagFiltersContainer.appendChild(allBtn);
 
@@ -357,22 +404,25 @@
                 tagBtn.className = `px-2 py-1 text-xs rounded-md ${activeTagFilter === tag ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`;
                 tagBtn.onclick = () => {
                     activeTagFilter = tag;
-                    renderSidebar(allArticles);
+                    renderSidebar();
                 };
                 tagFiltersContainer.appendChild(tagBtn);
             });
 
+            // Render Article List
             savedArticlesList.innerHTML = '';
-            if (filteredArticles.length === 0) {
+            if (articlesToDisplay.length === 0) {
                 let emptyMessage = isShowingArchived ? 'No archived articles.' : 'No active articles.';
-                if (activeTagFilter) {
-                    emptyMessage = `No ${isShowingArchived ? 'archived' : 'active'} articles with tag "${activeTagFilter}".`;
+                if (searchTerm) {
+                    emptyMessage = `No results for "${searchTerm}".`;
+                } else if (activeTagFilter) {
+                    emptyMessage = `No articles with tag "${activeTagFilter}".`;
                 }
                 savedArticlesList.innerHTML = `<p class="p-4 text-sm text-gray-400 dark:text-gray-500">${emptyMessage}</p>`;
                 return;
             }
 
-            filteredArticles.forEach(article => {
+            articlesToDisplay.forEach(article => {
                 const articleEl = document.createElement('div');
                 articleEl.className = `p-3 m-1 rounded-lg border-2 flex justify-between items-start ${article.id === currentArticleId ? 'bg-blue-100 dark:bg-blue-900/50 border-blue-500' : 'bg-white dark:bg-gray-800 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'}`;
                 articleEl.dataset.id = article.id;
@@ -588,7 +638,7 @@
         });
 
         // --- Highlighting Logic ---
-        let currentSelection = null;
+        
         articleContent.addEventListener('mouseup', (e) => {
             if (e.target.classList.contains('highlight')) return;
             const selection = window.getSelection();
@@ -607,11 +657,32 @@
                 highlightTooltip.style.display = 'none';
             }
         });
-        highlightButton.addEventListener('click', async () => {
+        
+        highlightButton.addEventListener('click', () => {
+            if (currentSelection) {
+                noteHighlightContext.textContent = currentSelection.toString();
+                addNoteModal.classList.remove('hidden');
+                addNoteModal.classList.add('flex');
+                noteTextarea.focus();
+            }
+            highlightTooltip.style.display = 'none';
+        });
+
+        cancelNoteBtn.addEventListener('click', () => {
+            addNoteModal.classList.add('hidden');
+            addNoteModal.classList.remove('flex');
+            noteTextarea.value = '';
+            currentSelection = null;
+        });
+
+        saveNoteBtn.addEventListener('click', async () => {
             if (currentSelection && currentArticleId) {
+                const noteText = noteTextarea.value.trim();
                 const mark = document.createElement('mark');
                 mark.className = 'highlight';
                 mark.id = `highlight-${Date.now()}`;
+                mark.dataset.note = noteText; // Store note in a data attribute
+                
                 try {
                     mark.appendChild(currentSelection.extractContents());
                     currentSelection.insertNode(mark);
@@ -621,9 +692,13 @@
                     window.getSelection().addRange(currentSelection);
                 }
             }
-            highlightTooltip.style.display = 'none';
+            addNoteModal.classList.add('hidden');
+            addNoteModal.classList.remove('flex');
+            noteTextarea.value = '';
+            currentSelection = null;
             window.getSelection().removeAllRanges();
         });
+
         articleContent.addEventListener('click', async (e) => {
             if (e.target.classList.contains('highlight')) {
                 if (confirm('Remove this highlight?')) {
@@ -641,7 +716,11 @@
             if (!currentArticleId) return;
             try {
                 const docRef = doc(db, articlesCollectionRef.path, currentArticleId);
-                const highlights = Array.from(articleContent.querySelectorAll('.highlight')).map(h => ({ id: h.id, text: h.textContent }));
+                const highlights = Array.from(articleContent.querySelectorAll('.highlight')).map(h => ({ 
+                    id: h.id, 
+                    text: h.textContent,
+                    note: h.dataset.note || '' // Get note from data attribute
+                }));
                 await updateDoc(docRef, { highlights, content: articleContent.innerHTML });
             } catch (error) {
                 console.error("Error saving highlights:", error);
@@ -659,15 +738,22 @@
                 list.className = 'space-y-4';
                 highlights.forEach(h => {
                     const item = document.createElement('li');
-                    item.className = 'border-l-4 border-yellow-400 pl-4 flex justify-between items-center';
+                    item.className = 'border-l-4 border-yellow-400 pl-4';
                     
-                    const textSpan = document.createElement('span');
-                    textSpan.textContent = h.text;
-                    item.appendChild(textSpan);
+                    const highlightText = document.createElement('p');
+                    highlightText.textContent = h.text;
+                    item.appendChild(highlightText);
+
+                    if (h.note) {
+                        const noteText = document.createElement('p');
+                        noteText.className = 'text-sm text-gray-600 dark:text-gray-400 mt-1 italic pl-2 border-l-2 border-gray-300 dark:border-gray-600';
+                        noteText.textContent = h.note;
+                        item.appendChild(noteText);
+                    }
 
                     const copyBtn = document.createElement('button');
                     copyBtn.textContent = 'Copy';
-                    copyBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded ml-4';
+                    copyBtn.className = 'text-xs bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold py-1 px-2 rounded mt-2';
                     copyBtn.onclick = () => copyHighlightToClipboard(h.text, copyBtn);
                     item.appendChild(copyBtn);
 
@@ -729,7 +815,11 @@
                 let content = `Highlights for: ${articleTitle}\n\n`;
                 content += "========================================\n\n";
                 highlights.forEach(h => {
-                    content += `- ${h.text}\n\n`;
+                    content += `- ${h.text}\n`;
+                    if (h.note) {
+                        content += `  Note: ${h.note}\n`;
+                    }
+                    content += '\n';
                 });
 
                 const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -793,7 +883,7 @@
             viewActiveBtn.addEventListener('click', () => {
                 if (isShowingArchived) {
                     isShowingArchived = false;
-                    setupFirestoreListeners();
+                    renderSidebar();
                     updateButtons();
                 }
             });
@@ -801,7 +891,7 @@
             viewArchivedBtn.addEventListener('click', () => {
                 if (!isShowingArchived) {
                     isShowingArchived = true;
-                    setupFirestoreListeners();
+                    renderSidebar();
                     updateButtons();
                 }
             });
@@ -920,6 +1010,11 @@
                 }
             });
         }
+        
+        // --- Search Logic ---
+        searchInput.addEventListener('input', () => {
+            renderSidebar();
+        });
 
         // --- Start the App ---
         setupDarkMode();
