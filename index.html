@@ -168,7 +168,7 @@
                 </div>
             </div>
             <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16">
-                <div id="article-content-wrapper" class="mx-auto bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg shadow-lg transition-all duration-300">
+                <div id="article-content-wrapper" class="w-full mx-auto bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg shadow-lg transition-all duration-300">
                     <div id="placeholder" class="text-center text-gray-500 dark:text-gray-400">
                         <h2 class="text-2xl font-semibold mb-2">Welcome!</h2>
                         <p>Paste a link above to start reading, or select a saved article from the sidebar.</p>
@@ -880,9 +880,3 @@
     </script>
 </body>
 </html>
-" in the Canvas.
-I have made the following changes to the code:
-1.  **HTML**: I've added new sections and buttons for "Line Height" and "Line Width" inside the reader settings pop-up menu.
-2.  **JavaScript**: I've updated the `setupReaderSettings` function to handle the new options. It now saves your choices for line height and width to your browser's local storage and applies the corresponding CSS classes to the article content area.
-
-This will give you more granular control over the look and feel of your reading experien
