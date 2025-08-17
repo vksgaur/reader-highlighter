@@ -7,10 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
+        }
+        .font-serif {
+            font-family: 'Lora', serif;
         }
         /* Custom scrollbar for a cleaner look */
         ::-webkit-scrollbar {
@@ -120,11 +123,33 @@
 
         <!-- Main content area -->
         <main class="flex-grow flex flex-col bg-gray-50 dark:bg-gray-900">
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                <form id="url-form" class="flex gap-2">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex justify-between items-center">
+                <form id="url-form" class="flex-grow flex gap-2">
                     <input type="url" id="article-url" placeholder="Paste an article link here..." class="flex-grow p-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
                     <button type="submit" class="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow">Fetch Article</button>
                 </form>
+                <div class="relative ml-4">
+                    <button id="reader-settings-btn" class="p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M3 12h18M3 18h18"></path></svg>
+                    </button>
+                    <div id="reader-settings-menu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl z-20 p-4">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Font Size</label>
+                            <div class="flex items-center justify-between mt-1">
+                                <button data-size="sm" class="font-size-btn text-sm">Aa</button>
+                                <button data-size="base" class="font-size-btn text-base">Aa</button>
+                                <button data-size="lg" class="font-size-btn text-lg">Aa</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Font Style</label>
+                            <div class="flex items-center justify-between mt-1">
+                                <button data-font="sans" class="font-family-btn font-sans">Sans</button>
+                                <button data-font="serif" class="font-family-btn font-serif">Serif</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16">
                 <div id="article-content-wrapper" class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg shadow-lg">
@@ -176,6 +201,7 @@
         const urlForm = document.getElementById('url-form');
         const articleUrlInput = document.getElementById('article-url');
         const articleView = document.getElementById('article-view');
+        const articleContentWrapper = document.getElementById('article-content-wrapper');
         const articleContent = document.getElementById('article-content');
         const placeholder = document.getElementById('placeholder');
         const loaderMain = document.getElementById('loader-main');
@@ -194,6 +220,8 @@
         const viewActiveBtn = document.getElementById('view-active-btn');
         const viewArchivedBtn = document.getElementById('view-archived-btn');
         const highlightsModalTitle = document.getElementById('highlights-modal-title');
+        const readerSettingsBtn = document.getElementById('reader-settings-btn');
+        const readerSettingsMenu = document.getElementById('reader-settings-menu');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -451,6 +479,7 @@
                     loaderMain.style.display = 'none';
                     articleContent.innerHTML = article.content;
                     document.querySelector('#article-content-wrapper').style.display = 'block';
+                    applyReaderSettings(); // Apply settings when a new article is loaded
                 } else {
                     currentArticleId = null;
                     articleContent.innerHTML = '';
@@ -625,11 +654,10 @@
         }
 
         function copyHighlightToClipboard(text, button) {
-            // Use a fallback for environments where navigator.clipboard might be restricted (like some iframes)
             const fallbackCopy = (textToCopy) => {
                 const textArea = document.createElement("textarea");
                 textArea.value = textToCopy;
-                textArea.style.position = "fixed"; // Avoid scrolling to bottom
+                textArea.style.position = "fixed";
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
@@ -649,7 +677,7 @@
                     setTimeout(() => { button.textContent = 'Copy'; }, 2000);
                 }, (err) => {
                     console.error('Async clipboard copy failed', err);
-                    fallbackCopy(text); // Try fallback if promise rejects
+                    fallbackCopy(text);
                 });
             } else {
                 fallbackCopy(text);
@@ -738,7 +766,7 @@
             viewActiveBtn.addEventListener('click', () => {
                 if (isShowingArchived) {
                     isShowingArchived = false;
-                    setupFirestoreListeners(); // Re-fetch and render
+                    setupFirestoreListeners();
                     updateButtons();
                 }
             });
@@ -746,16 +774,67 @@
             viewArchivedBtn.addEventListener('click', () => {
                 if (!isShowingArchived) {
                     isShowingArchived = true;
-                    setupFirestoreListeners(); // Re-fetch and render
+                    setupFirestoreListeners();
                     updateButtons();
                 }
             });
             updateButtons();
         }
 
+        // --- Reader Settings Logic ---
+        function setupReaderSettings() {
+            let settings = JSON.parse(localStorage.getItem('readerSettings')) || {
+                fontSize: 'base',
+                fontFamily: 'sans'
+            };
+
+            function applyReaderSettings() {
+                articleContentWrapper.classList.remove('text-sm', 'text-base', 'text-lg', 'font-sans', 'font-serif');
+                articleContentWrapper.classList.add(`text-${settings.fontSize}`, `font-${settings.fontFamily}`);
+            }
+
+            function updateButtons() {
+                document.querySelectorAll('.font-size-btn').forEach(btn => {
+                    btn.classList.toggle('bg-blue-500', btn.dataset.size === settings.fontSize);
+                    btn.classList.toggle('text-white', btn.dataset.size === settings.fontSize);
+                });
+                document.querySelectorAll('.font-family-btn').forEach(btn => {
+                    btn.classList.toggle('bg-blue-500', btn.dataset.font === settings.fontFamily);
+                    btn.classList.toggle('text-white', btn.dataset.font === settings.fontFamily);
+                });
+            }
+
+            readerSettingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                readerSettingsMenu.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!readerSettingsMenu.contains(e.target) && !readerSettingsBtn.contains(e.target)) {
+                    readerSettingsMenu.classList.add('hidden');
+                }
+            });
+
+            readerSettingsMenu.addEventListener('click', (e) => {
+                if (e.target.matches('.font-size-btn')) {
+                    settings.fontSize = e.target.dataset.size;
+                }
+                if (e.target.matches('.font-family-btn')) {
+                    settings.fontFamily = e.target.dataset.font;
+                }
+                localStorage.setItem('readerSettings', JSON.stringify(settings));
+                applyReaderSettings();
+                updateButtons();
+            });
+
+            applyReaderSettings();
+            updateButtons();
+        }
+
         // --- Start the App ---
         setupDarkMode();
         setupViewToggle();
+        setupReaderSettings();
 
     </script>
 </body>
