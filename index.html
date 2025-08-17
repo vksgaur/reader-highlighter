@@ -130,29 +130,45 @@
                 </form>
                 <div class="relative ml-4">
                     <button id="reader-settings-btn" class="p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M3 12h18M3 18h18"></path></svg>
+                        <span class="font-serif text-xl">Aa</span>
                     </button>
-                    <div id="reader-settings-menu" class="hidden absolute right-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-xl z-20 p-4">
+                    <div id="reader-settings-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-gray-700 rounded-lg shadow-xl z-20 p-4">
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Font Size</label>
                             <div class="flex items-center justify-between mt-1">
-                                <button data-size="sm" class="font-size-btn text-sm">Aa</button>
-                                <button data-size="base" class="font-size-btn text-base">Aa</button>
-                                <button data-size="lg" class="font-size-btn text-lg">Aa</button>
+                                <button data-size="sm" class="font-size-btn text-sm p-1 w-1/3 rounded">Aa</button>
+                                <button data-size="base" class="font-size-btn text-base p-1 w-1/3 rounded">Aa</button>
+                                <button data-size="lg" class="font-size-btn text-lg p-1 w-1/3 rounded">Aa</button>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Font Style</label>
+                            <div class="flex items-center justify-between mt-1">
+                                <button data-font="sans" class="font-family-btn font-sans p-1 w-1/2 rounded">Sans</button>
+                                <button data-font="serif" class="font-family-btn font-serif p-1 w-1/2 rounded">Serif</button>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Line Height</label>
+                            <div class="flex items-center justify-between mt-1">
+                                <button data-leading="normal" class="line-height-btn p-1 w-1/3 rounded">Std</button>
+                                <button data-leading="relaxed" class="line-height-btn p-1 w-1/3 rounded">Mid</button>
+                                <button data-leading="loose" class="line-height-btn p-1 w-1/3 rounded">High</button>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Font Style</label>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">Line Width</label>
                             <div class="flex items-center justify-between mt-1">
-                                <button data-font="sans" class="font-family-btn font-sans">Sans</button>
-                                <button data-font="serif" class="font-family-btn font-serif">Serif</button>
+                                <button data-width="2xl" class="line-width-btn p-1 w-1/3 rounded">Narrow</button>
+                                <button data-width="3xl" class="line-width-btn p-1 w-1/3 rounded">Std</button>
+                                <button data-width="5xl" class="line-width-btn p-1 w-1/3 rounded">Wide</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16">
-                <div id="article-content-wrapper" class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg shadow-lg">
+                <div id="article-content-wrapper" class="mx-auto bg-white dark:bg-gray-800 p-8 md:p-12 rounded-lg shadow-lg transition-all duration-300">
                     <div id="placeholder" class="text-center text-gray-500 dark:text-gray-400">
                         <h2 class="text-2xl font-semibold mb-2">Welcome!</h2>
                         <p>Paste a link above to start reading, or select a saved article from the sidebar.</p>
@@ -161,7 +177,7 @@
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                         <p>Fetching and cleaning article...</p>
                     </div>
-                    <article id="article-content" class="prose lg:prose-xl max-w-none"></article>
+                    <article id="article-content" class="prose max-w-none"></article>
                 </div>
             </div>
         </main>
@@ -785,12 +801,23 @@
         function setupReaderSettings() {
             let settings = JSON.parse(localStorage.getItem('readerSettings')) || {
                 fontSize: 'base',
-                fontFamily: 'sans'
+                fontFamily: 'sans',
+                lineHeight: 'relaxed',
+                lineWidth: '3xl'
             };
 
             function applyReaderSettings() {
+                // Font Size & Family
                 articleContentWrapper.classList.remove('text-sm', 'text-base', 'text-lg', 'font-sans', 'font-serif');
                 articleContentWrapper.classList.add(`text-${settings.fontSize}`, `font-${settings.fontFamily}`);
+
+                // Line Height
+                articleContent.classList.remove('leading-normal', 'leading-relaxed', 'leading-loose');
+                articleContent.classList.add(`leading-${settings.lineHeight}`);
+
+                // Line Width
+                articleContentWrapper.classList.remove('max-w-2xl', 'max-w-3xl', 'max-w-5xl');
+                articleContentWrapper.classList.add(`max-w-${settings.lineWidth}`);
             }
 
             function updateButtons() {
@@ -801,6 +828,14 @@
                 document.querySelectorAll('.font-family-btn').forEach(btn => {
                     btn.classList.toggle('bg-blue-500', btn.dataset.font === settings.fontFamily);
                     btn.classList.toggle('text-white', btn.dataset.font === settings.fontFamily);
+                });
+                document.querySelectorAll('.line-height-btn').forEach(btn => {
+                    btn.classList.toggle('bg-blue-500', btn.dataset.leading === settings.lineHeight);
+                    btn.classList.toggle('text-white', btn.dataset.leading === settings.lineHeight);
+                });
+                document.querySelectorAll('.line-width-btn').forEach(btn => {
+                    btn.classList.toggle('bg-blue-500', btn.dataset.width === settings.lineWidth);
+                    btn.classList.toggle('text-white', btn.dataset.width === settings.lineWidth);
                 });
             }
 
@@ -822,6 +857,12 @@
                 if (e.target.matches('.font-family-btn')) {
                     settings.fontFamily = e.target.dataset.font;
                 }
+                if (e.target.matches('.line-height-btn')) {
+                    settings.lineHeight = e.target.dataset.leading;
+                }
+                if (e.target.matches('.line-width-btn')) {
+                    settings.lineWidth = e.target.dataset.width;
+                }
                 localStorage.setItem('readerSettings', JSON.stringify(settings));
                 applyReaderSettings();
                 updateButtons();
@@ -839,3 +880,9 @@
     </script>
 </body>
 </html>
+" in the Canvas.
+I have made the following changes to the code:
+1.  **HTML**: I've added new sections and buttons for "Line Height" and "Line Width" inside the reader settings pop-up menu.
+2.  **JavaScript**: I've updated the `setupReaderSettings` function to handle the new options. It now saves your choices for line height and width to your browser's local storage and applies the corresponding CSS classes to the article content area.
+
+This will give you more granular control over the look and feel of your reading experien
