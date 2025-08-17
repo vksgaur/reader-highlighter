@@ -123,10 +123,13 @@
 
         <!-- Main content area -->
         <main id="main-content" class="flex-grow flex flex-col bg-gray-50 dark:bg-gray-900 relative">
+            <div id="progress-bar-container" class="w-full h-1 bg-gray-200 dark:bg-gray-700 fixed top-0 z-20">
+                <div id="progress-bar" class="h-1 bg-green-500" style="width: 0%"></div>
+            </div>
             <button id="sidebar-toggle" class="absolute top-1/2 -translate-y-1/2 -left-3 z-10 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-full w-6 h-6 flex items-center justify-center">
                 <svg id="sidebar-toggle-icon" class="w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
-            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex justify-between items-center">
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex justify-between items-center mt-1">
                 <form id="url-form" class="flex-grow flex gap-2">
                     <input type="url" id="article-url" placeholder="Paste an article link here..." class="flex-grow p-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
                     <button type="submit" class="bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow">Fetch Article</button>
@@ -244,6 +247,7 @@
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
         const sidebarToggleIcon = document.getElementById('sidebar-toggle-icon');
+        const progressBar = document.getElementById('progress-bar');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -501,7 +505,8 @@
                     loaderMain.style.display = 'none';
                     articleContent.innerHTML = article.content;
                     document.querySelector('#article-content-wrapper').style.display = 'block';
-                    applyReaderSettings(); // Apply settings when a new article is loaded
+                    applyReaderSettings();
+                    articleView.scrollTop = 0; // Reset scroll to top
                 } else {
                     currentArticleId = null;
                     articleContent.innerHTML = '';
@@ -903,11 +908,25 @@
             applySidebarState();
         }
 
+        // --- Reading Progress Bar Logic ---
+        function setupProgressBar() {
+            articleView.addEventListener('scroll', () => {
+                const scrollableHeight = articleView.scrollHeight - articleView.clientHeight;
+                if (scrollableHeight > 0) {
+                    const progress = (articleView.scrollTop / scrollableHeight) * 100;
+                    progressBar.style.width = `${progress}%`;
+                } else {
+                    progressBar.style.width = '0%';
+                }
+            });
+        }
+
         // --- Start the App ---
         setupDarkMode();
         setupViewToggle();
         setupReaderSettings();
         setupSidebarToggle();
+        setupProgressBar();
 
     </script>
 </body>
