@@ -96,7 +96,7 @@
     <!-- Main App View -->
     <div id="app-view" class="flex h-screen overflow-hidden hidden">
         <!-- Sidebar for saved articles -->
-        <aside class="w-1/3 max-w-sm bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <aside id="sidebar" class="w-80 md:w-96 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0 transition-all duration-300 ease-in-out">
             <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex justify-between items-center">
                     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Read & Highlight</h1>
@@ -122,7 +122,10 @@
         </aside>
 
         <!-- Main content area -->
-        <main class="flex-grow flex flex-col bg-gray-50 dark:bg-gray-900">
+        <main id="main-content" class="flex-grow flex flex-col bg-gray-50 dark:bg-gray-900 relative">
+            <button id="sidebar-toggle" class="absolute top-1/2 -translate-y-1/2 -left-3 z-10 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-full w-6 h-6 flex items-center justify-center">
+                <svg id="sidebar-toggle-icon" class="w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
             <div class="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex justify-between items-center">
                 <form id="url-form" class="flex-grow flex gap-2">
                     <input type="url" id="article-url" placeholder="Paste an article link here..." class="flex-grow p-3 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
@@ -238,6 +241,9 @@
         const highlightsModalTitle = document.getElementById('highlights-modal-title');
         const readerSettingsBtn = document.getElementById('reader-settings-btn');
         const readerSettingsMenu = document.getElementById('reader-settings-menu');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebarToggleIcon = document.getElementById('sidebar-toggle-icon');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -872,10 +878,36 @@
             updateButtons();
         }
 
+        // --- Sidebar Toggle Logic ---
+        function setupSidebarToggle() {
+            let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+            function applySidebarState() {
+                if (isCollapsed) {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebar.classList.add('w-0');
+                    sidebarToggleIcon.classList.add('rotate-180');
+                } else {
+                    sidebar.classList.remove('-translate-x-full');
+                    sidebar.classList.remove('w-0');
+                    sidebarToggleIcon.classList.remove('rotate-180');
+                }
+            }
+
+            sidebarToggle.addEventListener('click', () => {
+                isCollapsed = !isCollapsed;
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+                applySidebarState();
+            });
+
+            applySidebarState();
+        }
+
         // --- Start the App ---
         setupDarkMode();
         setupViewToggle();
         setupReaderSettings();
+        setupSidebarToggle();
 
     </script>
 </body>
