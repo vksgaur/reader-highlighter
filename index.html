@@ -38,7 +38,7 @@
             background: #64748b; /* slate-500 */
         }
         
-        /* NEW: Subtle Highlight Style */
+        /* Subtle Highlight Style */
         .highlight {
             background: transparent;
             border-bottom: 2px solid #818cf8; /* indigo-400 */
@@ -62,7 +62,7 @@
             transition: opacity 0.3s ease;
         }
 
-        /* NEW: Refined Prose/Typography Styles */
+        /* Refined Prose/Typography Styles */
         .prose h1, .prose h2, .prose h3 {
             font-family: 'Lora', serif;
         }
@@ -155,12 +155,12 @@
             <button id="sidebar-toggle" class="absolute top-1/2 -translate-y-1/2 -left-3 z-10 bg-white dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 rounded-full w-6 h-6 flex items-center justify-center">
                 <svg id="sidebar-toggle-icon" class="w-4 h-4 text-slate-600 dark:text-slate-300 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
             </button>
-            <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shadow-sm flex justify-between items-center mt-1">
+            <div id="main-header" class="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shadow-sm flex justify-between items-center mt-1">
                 <form id="url-form" class="flex-grow flex gap-2">
                     <input type="url" id="article-url" placeholder="Paste an article link here..." class="flex-grow p-3 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" required>
                     <button type="submit" class="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition shadow">Fetch Article</button>
                 </form>
-                <div class="relative ml-4">
+                <div class="relative ml-4 flex items-center gap-2">
                     <button id="reader-settings-btn" class="p-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                         <span class="font-serif text-xl">Aa</span>
                     </button>
@@ -199,7 +199,11 @@
                     </div>
                 </div>
             </div>
-            <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16">
+            <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16 relative">
+                 <button id="distraction-free-btn" class="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 z-10" title="Distraction-free Mode">
+                    <svg id="distraction-enter-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5"></path></svg>
+                    <svg id="distraction-exit-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v4m0 0h4M8 8L3 3m13 1V4m0 0h-4m4 0l-5 5M4 20v-4m0 0h4m-4 0l5-5m13 1v-4m0 0h-4m4 0l-5-5"></path></svg>
+                </button>
                 <div id="article-content-wrapper" class="w-full mx-auto bg-white dark:bg-slate-800 p-8 md:p-12 rounded-lg shadow-lg transition-all duration-300">
                     <div id="placeholder" class="text-center text-slate-500 dark:text-slate-400">
                         <h2 class="text-2xl font-semibold mb-2">Welcome!</h2>
@@ -305,6 +309,10 @@
         const searchInput = document.getElementById('search-input');
         const surpriseMeBtn = document.getElementById('surprise-me-btn');
         const imageExportContainer = document.getElementById('image-export-container');
+        const mainHeader = document.getElementById('main-header');
+        const distractionFreeBtn = document.getElementById('distraction-free-btn');
+        const distractionEnterIcon = document.getElementById('distraction-enter-icon');
+        const distractionExitIcon = document.getElementById('distraction-exit-icon');
         
         // Your Firebase Configuration
         const firebaseConfig = {
@@ -329,6 +337,7 @@
         let activeTagFilter = null;
         let isShowingArchived = false;
         let currentSelection = null;
+        let isDistractionFree = false;
 
         // --- Authentication Logic ---
         
@@ -1112,12 +1121,38 @@
             }
         });
 
+        // --- Distraction Free Mode Logic ---
+        function setupDistractionFreeMode() {
+            distractionFreeBtn.addEventListener('click', () => {
+                isDistractionFree = !isDistractionFree;
+                
+                sidebar.classList.toggle('hidden', isDistractionFree);
+                mainHeader.classList.toggle('hidden', isDistractionFree);
+                sidebarToggle.classList.toggle('hidden', isDistractionFree);
+
+                distractionEnterIcon.classList.toggle('hidden', isDistractionFree);
+                distractionExitIcon.classList.toggle('hidden', !isDistractionFree);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && isDistractionFree) {
+                    isDistractionFree = false;
+                    sidebar.classList.remove('hidden');
+                    mainHeader.classList.remove('hidden');
+                    sidebarToggle.classList.remove('hidden');
+                    distractionEnterIcon.classList.remove('hidden');
+                    distractionExitIcon.classList.add('hidden');
+                }
+            });
+        }
+
         // --- Start the App ---
         setupDarkMode();
         setupViewToggle();
         setupReaderSettings();
         setupSidebarToggle();
         setupProgressBar();
+        setupDistractionFreeMode();
 
     </script>
 </body>
