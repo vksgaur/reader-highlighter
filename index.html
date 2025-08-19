@@ -38,7 +38,7 @@
             background: #64748b; /* slate-500 */
         }
         
-        /* UPDATED: Highlight Styles */
+        /* Highlight Styles */
         .highlight {
             cursor: pointer;
             position: relative;
@@ -51,9 +51,9 @@
         .highlight-sky    { background-color: rgba(56, 189, 248, 0.5); }
         .highlight-green  { background-color: rgba(74, 222, 128, 0.5); }
 
-        /* Simple tooltip for the highlight popup */
+        /* FIXED: Tooltip for the highlight popup */
         #highlight-tooltip {
-            position: absolute;
+            position: fixed; /* Changed from absolute to fixed */
             display: none;
             z-index: 100;
         }
@@ -202,7 +202,7 @@
         </main>
     </div>
 
-    <!-- UPDATED: Tooltip for highlighting -->
+    <!-- Tooltip for highlighting -->
     <div id="highlight-tooltip">
         <div class="p-1 rounded-md shadow-lg bg-slate-800 border border-slate-700 flex items-center gap-1">
             <button class="highlight-color-btn w-6 h-6 rounded-full bg-yellow-300 border-2 border-transparent hover:border-white" data-color="yellow" title="Highlight Yellow"></button>
@@ -290,7 +290,6 @@
         const savedArticlesList = document.getElementById('saved-articles-list');
         const userInfo = document.getElementById('user-info');
         const highlightTooltip = document.getElementById('highlight-tooltip');
-        // REMOVED: highlightButton
         const highlightsModal = document.getElementById('highlights-modal');
         const highlightsList = document.getElementById('highlights-list');
         const closeModalBtn = document.getElementById('close-modal-btn');
@@ -707,7 +706,7 @@
             }
         });
 
-        // --- Highlighting Logic (UPDATED & FIXED) ---
+        // --- Highlighting Logic (FIXED) ---
         
         articleContent.addEventListener('mouseup', (e) => {
             if (e.target.closest('.highlight')) {
@@ -720,13 +719,13 @@
                 currentSelection = selection.getRangeAt(0);
                 const rect = currentSelection.getBoundingClientRect();
                 
-                // FIX: Make the tooltip visible *before* measuring its dimensions.
                 highlightTooltip.style.display = 'block';
                 const tooltipWidth = highlightTooltip.offsetWidth;
                 const tooltipHeight = highlightTooltip.offsetHeight;
                 
-                highlightTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2 - tooltipWidth / 2}px`;
-                highlightTooltip.style.top = `${rect.top + articleView.scrollTop - tooltipHeight - 10}px`;
+                // FIXED: Simplified position calculation for 'position: fixed'
+                highlightTooltip.style.left = `${rect.left + rect.width / 2 - tooltipWidth / 2}px`;
+                highlightTooltip.style.top = `${rect.top - tooltipHeight - 10}px`;
             } else {
                 highlightTooltip.style.display = 'none';
             }
