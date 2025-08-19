@@ -707,7 +707,7 @@
             }
         });
 
-        // --- Highlighting Logic (UPDATED) ---
+        // --- Highlighting Logic (UPDATED & FIXED) ---
         
         articleContent.addEventListener('mouseup', (e) => {
             if (e.target.closest('.highlight')) {
@@ -720,12 +720,13 @@
                 currentSelection = selection.getRangeAt(0);
                 const rect = currentSelection.getBoundingClientRect();
                 
+                // FIX: Make the tooltip visible *before* measuring its dimensions.
+                highlightTooltip.style.display = 'block';
                 const tooltipWidth = highlightTooltip.offsetWidth;
                 const tooltipHeight = highlightTooltip.offsetHeight;
                 
                 highlightTooltip.style.left = `${rect.left + window.scrollX + rect.width / 2 - tooltipWidth / 2}px`;
                 highlightTooltip.style.top = `${rect.top + articleView.scrollTop - tooltipHeight - 10}px`;
-                highlightTooltip.style.display = 'block';
             } else {
                 highlightTooltip.style.display = 'none';
             }
