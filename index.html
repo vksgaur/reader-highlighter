@@ -10,12 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        /* FIXED: Removed background-color rules to let Tailwind handle them */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc; /* slate-50 */
-        }
-        .dark body {
-            background-color: #020617; /* slate-950 */
         }
         .font-serif {
             font-family: 'Lora', serif;
@@ -27,7 +24,7 @@
         ::-webkit-scrollbar-track {
             background: #e2e8f0; /* slate-200 */
         }
-        .dark ::webkit-scrollbar-track {
+        .dark ::-webkit-scrollbar-track {
             background: #1e293b; /* slate-800 */
         }
         ::-webkit-scrollbar-thumb {
@@ -51,9 +48,8 @@
         .highlight-sky    { background-color: rgba(56, 189, 248, 0.5); }
         .highlight-green  { background-color: rgba(74, 222, 128, 0.5); }
 
-        /* FIXED: Tooltip for the highlight popup */
         #highlight-tooltip {
-            position: fixed; /* Changed from absolute to fixed */
+            position: fixed;
             display: none;
             z-index: 100;
         }
@@ -706,7 +702,7 @@
             }
         });
 
-        // --- Highlighting Logic (FIXED) ---
+        // --- Highlighting Logic ---
         
         articleContent.addEventListener('mouseup', (e) => {
             if (e.target.closest('.highlight')) {
@@ -723,7 +719,6 @@
                 const tooltipWidth = highlightTooltip.offsetWidth;
                 const tooltipHeight = highlightTooltip.offsetHeight;
                 
-                // FIXED: Simplified position calculation for 'position: fixed'
                 highlightTooltip.style.left = `${rect.left + rect.width / 2 - tooltipWidth / 2}px`;
                 highlightTooltip.style.top = `${rect.top - tooltipHeight - 10}px`;
             } else {
@@ -837,7 +832,7 @@
             }
         }
 
-        // --- Highlights Modal Logic (UPDATED) ---
+        // --- Highlights Modal Logic ---
         function showHighlightsModal(highlights, articleTitle) {
             highlightsModalTitle.textContent = `Highlights for "${articleTitle}"`;
             highlightsList.innerHTML = '';
@@ -1019,25 +1014,28 @@
             }
         });
 
-        // --- Dark Mode Logic ---
+        // --- Dark Mode Logic (FIXED) ---
         function setupDarkMode() {
             const isDarkMode = () => localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            
             const applyTheme = () => {
                 if (isDarkMode()) {
                     document.documentElement.classList.add('dark');
-                    lightIcon.classList.remove('hidden');
-                    darkIcon.classList.add('hidden');
+                    darkIcon.classList.remove('hidden'); // Show moon
+                    lightIcon.classList.add('hidden');   // Hide sun
                 } else {
                     document.documentElement.classList.remove('dark');
-                    darkIcon.classList.remove('hidden');
-                    lightIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden'); // Show sun
+                    darkIcon.classList.add('hidden');    // Hide moon
                 }
             };
+
             themeToggleBtn.addEventListener('click', () => {
                 const isDark = document.documentElement.classList.toggle('dark');
                 localStorage.theme = isDark ? 'dark' : 'light';
                 applyTheme();
             });
+
             applyTheme();
         }
         
