@@ -1,12 +1,13 @@
 import { getFirestore, doc, getDoc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { renderSidebar } from './ui.js';
 
-const db = getFirestore();
+let db; // Will be initialized later
 let articlesCollectionRef;
 let unsubscribe;
 let allUserArticles = [];
 
-export const setupFirestoreListeners = (userId) => {
+export const setupFirestoreListeners = (app, userId) => {
+    db = getFirestore(app); // Initialize Firestore here
     articlesCollectionRef = collection(db, `artifacts/read-highlight-app/users/${userId}/articles`);
     const q = query(articlesCollectionRef);
     

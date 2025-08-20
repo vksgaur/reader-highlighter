@@ -9,11 +9,11 @@ const app = initializeFirebaseApp(firebaseConfig);
 
 // This function is called by auth.js once the user is logged in
 export const initializeApp = (user) => {
-    setupFirestoreListeners(user.uid);
+    setupFirestoreListeners(app, user.uid);
 };
 
 // Setup the UI and Authentication listeners on page load
 document.addEventListener('DOMContentLoaded', () => {
     initializeUI();
-    setupAuthentication();
+    setupAuthentication(app);
 });

@@ -1,8 +1,7 @@
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { initializeApp } from './main.js';
 
-const auth = getAuth();
-const provider = new GoogleAuthProvider();
+let auth; // Will be initialized later
 
 const loginView = document.getElementById('login-view');
 const appView = document.getElementById('app-view');
@@ -10,6 +9,7 @@ const googleSignInBtn = document.getElementById('google-signin-btn');
 const userInfo = document.getElementById('user-info');
 
 const signIn = () => {
+    const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch(error => {
         console.error("Google Sign-In failed:", error);
     });
@@ -19,7 +19,8 @@ const signOutUser = () => {
     signOut(auth);
 };
 
-export const setupAuthentication = () => {
+export const setupAuthentication = (app) => {
+    auth = getAuth(app); // Initialize auth here
     googleSignInBtn.addEventListener('click', signIn);
 
     onAuthStateChanged(auth, user => {
