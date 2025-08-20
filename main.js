@@ -7,16 +7,18 @@ import { initializeUI, clearUIForSignOut } from './ui.js';
 const initialLoader = document.getElementById('initial-loader');
 
 // Central Authentication State Manager
-// This is the core logic that responds to user sign-in or sign-out.
 onAuthStateChanged(auth, user => {
     initialLoader.classList.add('hidden'); // Hide loader once auth state is known
-    updateUserUI(user); // Update the user info display (e.g., name, photo)
+    
     if (user) {
-        // If the user is signed in, set up the database listeners for their data.
-        initializeUI();
+        // MODIFIED: Initialize UI functions (including theme toggle) BEFORE showing the app view.
+        // This prevents a race condition with styling.
+        initializeUI(); 
+        updateUserUI(user); // Now, show the main application view
         setupFirestoreListeners(user.uid);
     } else {
         // If the user is signed out, clear their data from the screen.
+        updateUserUI(user); // Show the login screen
         clearFirestoreListeners();
         clearUIForSignOut();
     }
