@@ -12,6 +12,7 @@ const elements = {
     loaderSidebar: document.getElementById('loader-sidebar'),
     savedArticlesList: document.getElementById('saved-articles-list'),
     highlightTooltip: document.getElementById('highlight-tooltip'),
+    editHighlightTooltip: document.getElementById('edit-highlight-tooltip'), // New
     highlightsModal: document.getElementById('highlights-modal'),
     highlightsList: document.getElementById('highlights-list'),
     closeModalBtn: document.getElementById('close-modal-btn'),
@@ -47,6 +48,7 @@ let currentArticleId = null;
 let activeTagFilter = null;
 let isShowingArchived = false;
 let currentSelection = null;
+let currentEditingHighlight = null; // New: To track which highlight is being edited
 
 // --- General UI Functions ---
 
@@ -65,13 +67,11 @@ function showConfirmation(title, text, confirmButtonClass = 'bg-red-600 hover:bg
         const closeAndResolve = (value) => {
             elements.confirmModal.classList.add('hidden');
             elements.confirmModal.classList.remove('flex');
-            // Remove the specific, named listeners to prevent memory leaks
             elements.confirmModalConfirmBtn.removeEventListener('click', onConfirm);
             elements.confirmModalCancelBtn.removeEventListener('click', onCancel);
             resolve(value);
         }
         
-        // Add the named listeners
         elements.confirmModalConfirmBtn.addEventListener('click', onConfirm);
         elements.confirmModalCancelBtn.addEventListener('click', onCancel);
     });
@@ -278,7 +278,7 @@ async function deleteArticle(docId) {
             elements.articleContent.innerHTML = '';
             elements.placeholder.style.display = 'block';
         }
-    } catch (error) {
+    } catch (error)
         console.error("Error deleting article:", error);
     }
 }
@@ -370,7 +370,6 @@ export function initializeUI() {
     setupModals();
 }
 
-// --- New function to clear UI on sign-out ---
 export const clearUIForSignOut = () => {
     elements.savedArticlesList.innerHTML = '<p class="p-4 text-sm text-slate-400 dark:text-slate-500">Please sign in to see your articles.</p>';
     elements.articleContent.innerHTML = '';
@@ -522,12 +521,15 @@ function setupProgressBar() {
     });
 }
 
+// --- MODIFIED HIGHLIGHTING LOGIC ---
 function setupHighlighting() {
+    // Show CREATE tooltip on text selection
     elements.articleContent.addEventListener('mouseup', (e) => {
+        // If we clicked inside an existing highlight, do nothing. The 'click' listener will handle it.
         if (e.target.closest('.highlight')) {
             elements.highlightTooltip.style.display = 'none';
             return;
-        };
+        }
         const selection = window.getSelection();
         if (selection.toString().trim().length > 0) {
             currentSelection = selection.getRangeAt(0);
@@ -542,12 +544,28 @@ function setupHighlighting() {
         }
     });
 
+    // Show EDIT tooltip on clicking an existing highlight
+    elements.articleContent.addEventListener('click', (e) => {
+        const clickedHighlight = e.target.closest('.highlight');
+        if (clickedHighlight) {
+            window.getSelection().removeAllRanges();
+            elements.highlightTooltip.style.display = 'none';
+            showEditHighlightTooltip(clickedHighlight);
+        }
+    });
+
+    // Hide tooltips on general mousedown
     document.addEventListener('mousedown', (e) => {
         if (!elements.highlightTooltip.contains(e.target) && elements.highlightTooltip.style.display === 'block') {
             elements.highlightTooltip.style.display = 'none';
         }
+        if (!elements.editHighlightTooltip.contains(e.target) && elements.editHighlightTooltip.style.display === 'block') {
+            elements.editHighlightTooltip.style.display = 'none';
+            currentEditingHighlight = null;
+        }
     });
     
+    // Handle CREATE tooltip actions
     elements.highlightTooltip.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -557,16 +575,61 @@ function setupHighlighting() {
             showNoteModal();
         }
     });
+
+    // Handle EDIT tooltip actions
+    elements.editHighlightTooltip.addEventListener('click', async (e) => {
+        const target = e.target.closest('button');
+        if (!target || !currentEditingHighlight) return;
+
+        if (target.classList.contains('edit-highlight-color-btn')) {
+            const newColor = target.dataset.color;
+            currentEditingHighlight.className = `highlight highlight-${newColor}`;
+            currentEditingHighlight.dataset.color = newColor;
+            await saveHighlights();
+        } else if (target.id === 'edit-note-btn') {
+            showNoteModal(currentEditingHighlight);
+        } else if (target.id === 'delete-highlight-btn') {
+            // Unwrap the <mark> element
+            const parent = currentEditingHighlight.parentNode;
+            while (currentEditingHighlight.firstChild) {
+                parent.insertBefore(currentEditingHighlight.firstChild, currentEditingHighlight);
+            }
+            parent.removeChild(currentEditingHighlight);
+            await saveHighlights();
+        }
+        elements.editHighlightTooltip.style.display = 'none';
+        currentEditingHighlight = null;
+    });
 }
 
-function showNoteModal() {
-    if (currentSelection) {
+function showEditHighlightTooltip(highlightEl) {
+    currentEditingHighlight = highlightEl;
+    const rect = highlightEl.getBoundingClientRect();
+    elements.editHighlightTooltip.style.display = 'block';
+    const tooltipWidth = elements.editHighlightTooltip.offsetWidth;
+    const tooltipHeight = elements.editHighlightTooltip.offsetHeight;
+    elements.editHighlightTooltip.style.left = `${rect.left + rect.width / 2 - tooltipWidth / 2}px`;
+    elements.editHighlightTooltip.style.top = `${rect.top - tooltipHeight - 10}px`;
+}
+
+function showNoteModal(existingHighlight = null) {
+    if (existingHighlight) {
+        // Editing an existing note
+        elements.noteHighlightContext.textContent = existingHighlight.textContent;
+        elements.noteTextarea.value = existingHighlight.dataset.note || '';
+    } else if (currentSelection) {
+        // Creating a new note for a new highlight
         elements.noteHighlightContext.textContent = currentSelection.toString();
-        elements.addNoteModal.classList.remove('hidden');
-        elements.addNoteModal.classList.add('flex');
-        elements.noteTextarea.focus();
+        elements.noteTextarea.value = '';
+    } else {
+        return; // Should not happen
     }
+
+    elements.addNoteModal.classList.remove('hidden');
+    elements.addNoteModal.classList.add('flex');
+    elements.noteTextarea.focus();
     elements.highlightTooltip.style.display = 'none';
+    elements.editHighlightTooltip.style.display = 'none';
 }
 
 function setupModals() {
@@ -578,12 +641,22 @@ function setupModals() {
     elements.cancelNoteBtn.addEventListener('click', () => {
         elements.addNoteModal.classList.add('hidden');
         elements.noteTextarea.value = '';
+        currentEditingHighlight = null; // Clear editing state
     });
 
     elements.saveNoteBtn.addEventListener('click', async () => {
         const noteText = elements.noteTextarea.value.trim();
-        await applyHighlight('yellow', noteText);
+        if (currentEditingHighlight) {
+            // We are EDITING a note on an existing highlight
+            currentEditingHighlight.dataset.note = noteText;
+            await saveHighlights();
+        } else if (currentSelection) {
+            // We are ADDING a note to a NEW highlight
+            await applyHighlight('yellow', noteText); // Default to yellow or another color
+        }
+        
         elements.addNoteModal.classList.add('hidden');
         elements.noteTextarea.value = '';
+        currentEditingHighlight = null;
     });
 }
