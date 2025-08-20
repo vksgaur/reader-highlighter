@@ -443,20 +443,45 @@ function handleSurpriseMe() {
     }
 }
 
+// --- REVISED AND FIXED: Dark mode logic ---
 function setupDarkMode() {
-    const applyTheme = () => {
-        const isDark = localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', isDark);
+    // This helper function updates the icons based on the current theme
+    function updateIcons(isDark) {
         elements.darkIcon.classList.toggle('hidden', !isDark);
         elements.lightIcon.classList.toggle('hidden', isDark);
-    };
+    }
+
+    // This function applies the theme based on what's saved or the system preference
+    function applyTheme() {
+        const isDark = localStorage.theme === 'dark' || 
+                       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        
+        // Use a conditional add/remove instead of toggle with a boolean,
+        // as it can be more reliable in some environments.
+        if (isDark) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        updateIcons(isDark);
+    }
+
+    // The click listener now simply toggles the class and saves the new state
     elements.themeToggleBtn.addEventListener('click', () => {
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.theme = isDark ? 'dark' : 'light';
-        applyTheme();
+        // Directly toggle the class on the root element
+        const isNowDark = document.documentElement.classList.toggle('dark');
+        
+        // Save the new, correct state to localStorage
+        localStorage.theme = isNowDark ? 'dark' : 'light';
+        
+        // Update the icons to match
+        updateIcons(isNowDark);
     });
+
+    // Apply the correct theme when the application first loads
     applyTheme();
 }
+
 
 function setupViewToggle() {
     const updateButtons = () => {
@@ -519,7 +544,6 @@ function setupReaderSettings() {
     updateReaderButtons();
 }
 
-// --- MODIFIED: Handles both mobile and desktop sidebar toggling ---
 function setupSidebarToggle() {
     // --- Mobile Sidebar (Overlay) ---
     const toggleMobileSidebar = () => {
@@ -530,10 +554,8 @@ function setupSidebarToggle() {
     elements.mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
     elements.sidebarBackdrop.addEventListener('click', toggleMobileSidebar);
 
-    // Close mobile sidebar when an article is clicked from the list
     elements.savedArticlesList.addEventListener('click', (e) => {
         const articleCard = e.target.closest('div[data-id]');
-        // Check if it's a mobile screen by seeing if the backdrop is supposed to be visible
         const isMobile = window.getComputedStyle(elements.sidebarBackdrop).display !== 'none';
         if (articleCard && isMobile) {
             toggleMobileSidebar();
@@ -553,8 +575,7 @@ function setupSidebarToggle() {
         applyDesktopState();
     });
 
-    // Apply initial state on page load for desktop
-    if (window.innerWidth >= 768) { // Tailwind's `md` breakpoint
+    if (window.innerWidth >= 768) {
         applyDesktopState();
     }
 }
