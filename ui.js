@@ -377,6 +377,18 @@ export function initializeUI() {
     setupModals();
 }
 
+// --- New function to clear UI on sign-out ---
+export const clearUIForSignOut = () => {
+    elements.savedArticlesList.innerHTML = '<p class="p-4 text-sm text-slate-400 dark:text-slate-500">Please sign in to see your articles.</p>';
+    elements.articleContent.innerHTML = '';
+    elements.placeholder.style.display = 'block';
+    elements.loaderMain.style.display = 'none';
+    currentArticleId = null;
+    activeTagFilter = null;
+    isShowingArchived = false;
+};
+
+
 async function handleUrlFormSubmit(e) {
     e.preventDefault();
     const url = elements.articleUrlInput.value.trim();

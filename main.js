@@ -1,19 +1,25 @@
-import { initializeApp as initializeFirebaseApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { firebaseConfig } from './firebase-config.js';
-import { setupAuthentication } from './auth.js';
-import { setupFirestoreListeners } from './firestore.js';
-import { initializeUI } from './ui.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { auth } from './firebase.js'; // Import the initialized auth service
+import { setupAuthentication, updateUserUI } from './auth.js';
+import { setupFirestoreListeners, clearFirestoreListeners } from './firestore.js';
+import { initializeUI, clearUIForSignOut } from './ui.js';
 
-// Initialize Firebase
-const app = initializeFirebaseApp(firebaseConfig);
+// Central Authentication State Manager
+// This is the core logic that responds to user sign-in or sign-out.
+onAuthStateChanged(auth, user => {
+    updateUserUI(user); // Update the user info display (e.g., name, photo)
+    if (user) {
+        // If the user is signed in, set up the database listeners for their data.
+        initializeUI();
+        setupFirestoreListeners(user.uid);
+    } else {
+        // If the user is signed out, clear their data from the screen.
+        clearFirestoreListeners();
+        clearUIForSignOut();
+    }
+});
 
-// This function is called by auth.js once the user is logged in
-export const initializeApp = (user) => {
-    setupFirestoreListeners(app, user.uid);
-};
-
-// Setup the UI and Authentication listeners on page load
+// Setup the initial UI elements and the sign-in button listener on page load.
 document.addEventListener('DOMContentLoaded', () => {
-    initializeUI();
-    setupAuthentication(app);
+    setupAuthentication(); 
 });
