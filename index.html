@@ -79,6 +79,17 @@
         .favorite-btn.favorited .empty-star {
             display: none;
         }
+        /* Fix for the loader positioning */
+        #initial-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 9999;
+            background-color: #f8fafc; /* bg-slate-50 */
+        }
+        .dark #initial-loader {
+            background-color: #020617; /* dark:bg-slate-950 */
+        }
     </style>
 </head>
 <body class="dark:text-slate-200 bg-slate-50 dark:bg-slate-950">
