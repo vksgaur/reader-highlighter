@@ -10,7 +10,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* FIXED: Removed background-color rules to let Tailwind handle them */
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -264,26 +263,10 @@
     <!-- Hidden container for generating highlight images -->
     <div id="image-export-container" class="fixed top-0 left-0 -translate-x-full"></div>
     
-    <!-- 
-      FIX: The firebaseConfig is now placed in its own script tag before the main app logic.
-      This makes it available as a global variable and avoids the module loading error
-      that occurs when running the file directly in the browser.
-    -->
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyBD9Q-GgmHv2K3DaNGXAGMQANH59SGGpog",
-        authDomain: "reader-highlighter.firebaseapp.com",
-        projectId: "reader-highlighter",
-        storageBucket: "reader-highlighter.firebasestorage.app",
-        messagingSenderId: "515869894530",
-        appId: "1:515869894530:web:22f3a4adeb3c7a44e8919b",
-        measurementId: "G-QFW13VXR74"
-      };
-    </script>
-
     <!-- Firebase SDK and App Logic -->
     <script type="module">
-        // FIX: Removed the import for firebaseConfig as it's now a global variable.
+        // Import the configuration from your external file
+        import { firebaseConfig } from './firebase-config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1027,7 +1010,7 @@
             }
         });
 
-        // --- Dark Mode Logic (FIXED) ---
+        // --- Dark Mode Logic ---
         function setupDarkMode() {
             const isDarkMode = () => localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
             
