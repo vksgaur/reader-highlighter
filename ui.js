@@ -445,40 +445,22 @@ function handleSurpriseMe() {
 
 // --- REVISED AND FIXED: Dark mode logic ---
 function setupDarkMode() {
-    // This helper function updates the icons based on the current theme
-    function updateIcons(isDark) {
+    const applyTheme = () => {
+        const theme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = theme === 'dark' || (theme === null && systemPrefersDark);
+
+        document.documentElement.classList.toggle('dark', isDark);
         elements.darkIcon.classList.toggle('hidden', !isDark);
         elements.lightIcon.classList.toggle('hidden', isDark);
-    }
+    };
 
-    // This function applies the theme based on what's saved or the system preference
-    function applyTheme() {
-        const isDark = localStorage.theme === 'dark' || 
-                       (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        
-        // Use a conditional add/remove instead of toggle with a boolean,
-        // as it can be more reliable in some environments.
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-        updateIcons(isDark);
-    }
-
-    // The click listener now simply toggles the class and saves the new state
     elements.themeToggleBtn.addEventListener('click', () => {
-        // Directly toggle the class on the root element
-        const isNowDark = document.documentElement.classList.toggle('dark');
-        
-        // Save the new, correct state to localStorage
-        localStorage.theme = isNowDark ? 'dark' : 'light';
-        
-        // Update the icons to match
-        updateIcons(isNowDark);
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        applyTheme();
     });
 
-    // Apply the correct theme when the application first loads
     applyTheme();
 }
 
