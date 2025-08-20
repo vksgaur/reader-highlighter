@@ -4,9 +4,12 @@ import { setupAuthentication, updateUserUI } from './auth.js';
 import { setupFirestoreListeners, clearFirestoreListeners } from './firestore.js';
 import { initializeUI, clearUIForSignOut } from './ui.js';
 
+const initialLoader = document.getElementById('initial-loader');
+
 // Central Authentication State Manager
 // This is the core logic that responds to user sign-in or sign-out.
 onAuthStateChanged(auth, user => {
+    initialLoader.classList.add('hidden'); // Hide loader once auth state is known
     updateUserUI(user); // Update the user info display (e.g., name, photo)
     if (user) {
         // If the user is signed in, set up the database listeners for their data.
