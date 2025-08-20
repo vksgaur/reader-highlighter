@@ -263,10 +263,27 @@
 
     <!-- Hidden container for generating highlight images -->
     <div id="image-export-container" class="fixed top-0 left-0 -translate-x-full"></div>
+    
+    <!-- 
+      FIX: The firebaseConfig is now placed in its own script tag before the main app logic.
+      This makes it available as a global variable and avoids the module loading error
+      that occurs when running the file directly in the browser.
+    -->
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyBD9Q-GgmHv2K3DaNGXAGMQANH59SGGpog",
+        authDomain: "reader-highlighter.firebaseapp.com",
+        projectId: "reader-highlighter",
+        storageBucket: "reader-highlighter.firebasestorage.app",
+        messagingSenderId: "515869894530",
+        appId: "1:515869894530:web:22f3a4adeb3c7a44e8919b",
+        measurementId: "G-QFW13VXR74"
+      };
+    </script>
 
-
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK and App Logic -->
     <script type="module">
+        // FIX: Removed the import for firebaseConfig as it's now a global variable.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, onSnapshot, collection, query, addDoc, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -317,17 +334,6 @@
         const confirmModalConfirmBtn = document.getElementById('confirm-modal-confirm-btn');
         const confirmModalCancelBtn = document.getElementById('confirm-modal-cancel-btn');
         
-        // Your Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBD9Q-GgmHv2K3DaNGXAGMQANH59SGGpog",
-            authDomain: "reader-highlighter.firebaseapp.com",
-            projectId: "reader-highlighter",
-            storageBucket: "reader-highlighter.firebasestorage.app",
-            messagingSenderId: "515869894530",
-            appId: "1:515869894530:web:22f3a4adeb3c7a44e8919b",
-            measurementId: "G-QFW13VXR74"
-        };
-
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -346,7 +352,7 @@
         googleSignInBtn.addEventListener('click', () => {
             signInWithPopup(auth, provider).catch(error => {
                 console.error("Google Sign-In failed:", error);
-                alert(`Sign-in failed: ${error.message}`);
+                // A non-blocking UI element for errors would be better than alert()
             });
         });
 
@@ -389,7 +395,11 @@
             return new Promise(resolve => {
                 confirmModalTitle.textContent = title;
                 confirmModalText.textContent = text;
-                confirmModalConfirmBtn.className = `px-4 py-2 rounded text-sm font-semibold text-white ${confirmButtonClass}`;
+                
+                // Use a local reference for the confirm button to avoid issues with cloning
+                let currentConfirmBtn = document.getElementById('confirm-modal-confirm-btn');
+                currentConfirmBtn.className = `px-4 py-2 rounded text-sm font-semibold text-white ${confirmButtonClass}`;
+                
                 confirmModal.classList.remove('hidden');
                 confirmModal.classList.add('flex');
 
@@ -404,10 +414,13 @@
                     resolve(value);
                 }
                 
-                const newConfirmBtn = confirmModalConfirmBtn.cloneNode(true);
-                confirmModalConfirmBtn.parentNode.replaceChild(newConfirmBtn, confirmModalConfirmBtn);
-                const newCancelBtn = confirmModalCancelBtn.cloneNode(true);
-                confirmModalCancelBtn.parentNode.replaceChild(newCancelBtn, confirmModalCancelBtn);
+                // Clone and replace to ensure old listeners are removed
+                const newConfirmBtn = currentConfirmBtn.cloneNode(true);
+                currentConfirmBtn.parentNode.replaceChild(newConfirmBtn, currentConfirmBtn);
+                
+                let currentCancelBtn = document.getElementById('confirm-modal-cancel-btn');
+                const newCancelBtn = currentCancelBtn.cloneNode(true);
+                currentCancelBtn.parentNode.replaceChild(newCancelBtn, currentCancelBtn);
 
                 newConfirmBtn.addEventListener('click', onConfirm);
                 newCancelBtn.addEventListener('click', onCancel);
@@ -911,7 +924,7 @@
                 document.body.removeChild(a);
             } catch (error) {
                 console.error('Error generating image:', error);
-                alert('Sorry, could not generate image.');
+                // A non-blocking UI element for errors would be better than alert()
             }
             imageExportContainer.innerHTML = '';
         }
@@ -1078,7 +1091,7 @@
                 lineWidth: '3xl'
             };
 
-            function applyReaderSettings() {
+            window.applyReaderSettings = function() {
                 articleContentWrapper.classList.remove('text-sm', 'text-base', 'text-lg', 'font-sans', 'font-serif');
                 articleContentWrapper.classList.add(`text-${settings.fontSize}`, `font-${settings.fontFamily}`);
                 articleContent.classList.remove('leading-normal', 'leading-relaxed', 'leading-loose');
