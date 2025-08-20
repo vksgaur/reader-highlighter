@@ -12,7 +12,7 @@ const elements = {
     loaderSidebar: document.getElementById('loader-sidebar'),
     savedArticlesList: document.getElementById('saved-articles-list'),
     highlightTooltip: document.getElementById('highlight-tooltip'),
-    editHighlightTooltip: document.getElementById('edit-highlight-tooltip'), // New
+    editHighlightTooltip: document.getElementById('edit-highlight-tooltip'),
     highlightsModal: document.getElementById('highlights-modal'),
     highlightsList: document.getElementById('highlights-list'),
     closeModalBtn: document.getElementById('close-modal-btn'),
@@ -48,7 +48,7 @@ let currentArticleId = null;
 let activeTagFilter = null;
 let isShowingArchived = false;
 let currentSelection = null;
-let currentEditingHighlight = null; // New: To track which highlight is being edited
+let currentEditingHighlight = null;
 
 // --- General UI Functions ---
 
@@ -278,7 +278,7 @@ async function deleteArticle(docId) {
             elements.articleContent.innerHTML = '';
             elements.placeholder.style.display = 'block';
         }
-    } catch (error)
+    } catch (error) {
         console.error("Error deleting article:", error);
     }
 }
@@ -380,37 +380,58 @@ export const clearUIForSignOut = () => {
     isShowingArchived = false;
 };
 
-
+// --- MODIFIED Article Fetching Logic ---
 async function handleUrlFormSubmit(e) {
     e.preventDefault();
     const url = elements.articleUrlInput.value.trim();
     if (!url) return;
+
     elements.placeholder.style.display = 'none';
     elements.articleContent.innerHTML = '';
     elements.loaderMain.style.display = 'block';
     elements.articleContentWrapper.style.display = 'block';
+
     try {
         const response = await fetch(`https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(url)}`);
         if (!response.ok) throw new Error(`Network response was not ok (${response.status})`);
+        
         const html = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
-        let mainContent = doc.querySelector('article, [role="main"], #main, .main, #content, .content') || doc.body;
-        mainContent.querySelectorAll('script, style, link, nav, header, footer, aside, iframe, form, noscript').forEach(el => el.remove());
-        const title = doc.querySelector('h1')?.textContent || doc.title || 'Untitled Article';
-        const wordCount = (mainContent.textContent || "").trim().split(/\s+/).length;
+
+        // Use Readability.js to parse the article
+        if (typeof Readability === 'undefined') {
+            throw new Error("Readability.js library is not loaded.");
+        }
+        // We pass a clone of the document because Readability alters it
+        const reader = new Readability(doc.cloneNode(true));
+        const article = reader.parse();
+
+        if (!article) {
+            throw new Error("Could not parse the article content with Readability.");
+        }
+
+        const { title, content, textContent } = article;
+        const wordCount = (textContent || "").trim().split(/\s+/).length;
         const readingTime = Math.ceil(wordCount / 200);
 
-        const newArticleRef = await db.saveArticle({ url, title, content: mainContent.innerHTML, readingTime });
+        const newArticleRef = await db.saveArticle({ 
+            url, 
+            title: title || 'Untitled Article', 
+            content: content || '<p>Content could not be extracted.</p>', 
+            readingTime 
+        });
         loadArticle(newArticleRef.id);
+
     } catch (error) {
         console.error("Failed to fetch or parse article:", error);
-        elements.articleContent.innerHTML = `<p class="text-red-500">Sorry, we couldn't fetch that article. Error: ${error.message}</p>`;
+        elements.articleContent.innerHTML = `<p class="text-red-500">Sorry, we couldn't fetch that article. Please check the URL or try another one. Error: ${error.message}</p>`;
     } finally {
         elements.loaderMain.style.display = 'none';
         elements.urlForm.reset();
     }
 }
+
 
 function handleSurpriseMe() {
     const activeArticles = db.getArticles().filter(article => !article.isArchived);
@@ -521,11 +542,8 @@ function setupProgressBar() {
     });
 }
 
-// --- MODIFIED HIGHLIGHTING LOGIC ---
 function setupHighlighting() {
-    // Show CREATE tooltip on text selection
     elements.articleContent.addEventListener('mouseup', (e) => {
-        // If we clicked inside an existing highlight, do nothing. The 'click' listener will handle it.
         if (e.target.closest('.highlight')) {
             elements.highlightTooltip.style.display = 'none';
             return;
@@ -544,7 +562,6 @@ function setupHighlighting() {
         }
     });
 
-    // Show EDIT tooltip on clicking an existing highlight
     elements.articleContent.addEventListener('click', (e) => {
         const clickedHighlight = e.target.closest('.highlight');
         if (clickedHighlight) {
@@ -554,7 +571,6 @@ function setupHighlighting() {
         }
     });
 
-    // Hide tooltips on general mousedown
     document.addEventListener('mousedown', (e) => {
         if (!elements.highlightTooltip.contains(e.target) && elements.highlightTooltip.style.display === 'block') {
             elements.highlightTooltip.style.display = 'none';
@@ -565,7 +581,6 @@ function setupHighlighting() {
         }
     });
     
-    // Handle CREATE tooltip actions
     elements.highlightTooltip.addEventListener('click', (e) => {
         const target = e.target.closest('button');
         if (!target) return;
@@ -576,7 +591,6 @@ function setupHighlighting() {
         }
     });
 
-    // Handle EDIT tooltip actions
     elements.editHighlightTooltip.addEventListener('click', async (e) => {
         const target = e.target.closest('button');
         if (!target || !currentEditingHighlight) return;
@@ -589,7 +603,6 @@ function setupHighlighting() {
         } else if (target.id === 'edit-note-btn') {
             showNoteModal(currentEditingHighlight);
         } else if (target.id === 'delete-highlight-btn') {
-            // Unwrap the <mark> element
             const parent = currentEditingHighlight.parentNode;
             while (currentEditingHighlight.firstChild) {
                 parent.insertBefore(currentEditingHighlight.firstChild, currentEditingHighlight);
@@ -614,15 +627,13 @@ function showEditHighlightTooltip(highlightEl) {
 
 function showNoteModal(existingHighlight = null) {
     if (existingHighlight) {
-        // Editing an existing note
         elements.noteHighlightContext.textContent = existingHighlight.textContent;
         elements.noteTextarea.value = existingHighlight.dataset.note || '';
     } else if (currentSelection) {
-        // Creating a new note for a new highlight
         elements.noteHighlightContext.textContent = currentSelection.toString();
         elements.noteTextarea.value = '';
     } else {
-        return; // Should not happen
+        return;
     }
 
     elements.addNoteModal.classList.remove('hidden');
@@ -641,18 +652,16 @@ function setupModals() {
     elements.cancelNoteBtn.addEventListener('click', () => {
         elements.addNoteModal.classList.add('hidden');
         elements.noteTextarea.value = '';
-        currentEditingHighlight = null; // Clear editing state
+        currentEditingHighlight = null;
     });
 
     elements.saveNoteBtn.addEventListener('click', async () => {
         const noteText = elements.noteTextarea.value.trim();
         if (currentEditingHighlight) {
-            // We are EDITING a note on an existing highlight
             currentEditingHighlight.dataset.note = noteText;
             await saveHighlights();
         } else if (currentSelection) {
-            // We are ADDING a note to a NEW highlight
-            await applyHighlight('yellow', noteText); // Default to yellow or another color
+            await applyHighlight('yellow', noteText);
         }
         
         elements.addNoteModal.classList.add('hidden');
