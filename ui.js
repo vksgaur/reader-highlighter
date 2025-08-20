@@ -54,9 +54,7 @@ function showConfirmation(title, text, confirmButtonClass = 'bg-red-600 hover:bg
     return new Promise(resolve => {
         elements.confirmModalTitle.textContent = title;
         elements.confirmModalText.textContent = text;
-        
-        let currentConfirmBtn = document.getElementById('confirm-modal-confirm-btn');
-        currentConfirmBtn.className = `px-4 py-2 rounded text-sm font-semibold text-white ${confirmButtonClass}`;
+        elements.confirmModalConfirmBtn.className = `px-4 py-2 rounded text-sm font-semibold text-white ${confirmButtonClass}`;
         
         elements.confirmModal.classList.remove('hidden');
         elements.confirmModal.classList.add('flex');
@@ -67,20 +65,15 @@ function showConfirmation(title, text, confirmButtonClass = 'bg-red-600 hover:bg
         const closeAndResolve = (value) => {
             elements.confirmModal.classList.add('hidden');
             elements.confirmModal.classList.remove('flex');
-            newConfirmBtn.removeEventListener('click', onConfirm);
-            newCancelBtn.removeEventListener('click', onCancel);
+            // Remove the specific, named listeners to prevent memory leaks
+            elements.confirmModalConfirmBtn.removeEventListener('click', onConfirm);
+            elements.confirmModalCancelBtn.removeEventListener('click', onCancel);
             resolve(value);
         }
         
-        const newConfirmBtn = currentConfirmBtn.cloneNode(true);
-        currentConfirmBtn.parentNode.replaceChild(newConfirmBtn, currentConfirmBtn);
-        
-        let currentCancelBtn = document.getElementById('confirm-modal-cancel-btn');
-        const newCancelBtn = currentCancelBtn.cloneNode(true);
-        currentCancelBtn.parentNode.replaceChild(newCancelBtn, currentCancelBtn);
-
-        newConfirmBtn.addEventListener('click', onConfirm);
-        newCancelBtn.addEventListener('click', onCancel);
+        // Add the named listeners
+        elements.confirmModalConfirmBtn.addEventListener('click', onConfirm);
+        elements.confirmModalCancelBtn.addEventListener('click', onCancel);
     });
 }
 
