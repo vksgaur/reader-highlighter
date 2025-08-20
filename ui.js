@@ -2,6 +2,7 @@ import * as db from './firestore.js';
 
 // --- DOM Element References ---
 const elements = {
+    appView: document.getElementById('app-view'), // Main container
     urlForm: document.getElementById('url-form'),
     articleUrlInput: document.getElementById('article-url'),
     articleView: document.getElementById('article-view'),
@@ -28,6 +29,8 @@ const elements = {
     sidebar: document.getElementById('sidebar'),
     sidebarToggle: document.getElementById('sidebar-toggle'),
     sidebarToggleIcon: document.getElementById('sidebar-toggle-icon'),
+    mobileMenuBtn: document.getElementById('mobile-menu-btn'), // New
+    sidebarBackdrop: document.getElementById('sidebar-backdrop'), // New
     progressBar: document.getElementById('progress-bar'),
     addNoteModal: document.getElementById('add-note-modal'),
     noteHighlightContext: document.getElementById('note-highlight-context'),
@@ -380,7 +383,6 @@ export const clearUIForSignOut = () => {
     isShowingArchived = false;
 };
 
-// --- MODIFIED Article Fetching Logic ---
 async function handleUrlFormSubmit(e) {
     e.preventDefault();
     const url = elements.articleUrlInput.value.trim();
@@ -399,11 +401,9 @@ async function handleUrlFormSubmit(e) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
-        // Use Readability.js to parse the article
         if (typeof Readability === 'undefined') {
             throw new Error("Readability.js library is not loaded.");
         }
-        // We pass a clone of the document because Readability alters it
         const reader = new Readability(doc.cloneNode(true));
         const article = reader.parse();
 
@@ -519,20 +519,46 @@ function setupReaderSettings() {
     updateReaderButtons();
 }
 
+// --- MODIFIED: Handles both mobile and desktop sidebar toggling ---
 function setupSidebarToggle() {
-    let isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-    const applyState = () => {
-        elements.sidebar.classList.toggle('-translate-x-full', isCollapsed);
-        elements.sidebar.classList.toggle('w-0', isCollapsed);
-        elements.sidebarToggleIcon.classList.toggle('rotate-180', isCollapsed);
+    // --- Mobile Sidebar (Overlay) ---
+    const toggleMobileSidebar = () => {
+        elements.sidebar.classList.toggle('-translate-x-full');
+        elements.sidebarBackdrop.classList.toggle('hidden');
     };
-    elements.sidebarToggle.addEventListener('click', () => {
-        isCollapsed = !isCollapsed;
-        localStorage.setItem('sidebarCollapsed', isCollapsed);
-        applyState();
+
+    elements.mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
+    elements.sidebarBackdrop.addEventListener('click', toggleMobileSidebar);
+
+    // Close mobile sidebar when an article is clicked from the list
+    elements.savedArticlesList.addEventListener('click', (e) => {
+        const articleCard = e.target.closest('div[data-id]');
+        // Check if it's a mobile screen by seeing if the backdrop is supposed to be visible
+        const isMobile = window.getComputedStyle(elements.sidebarBackdrop).display !== 'none';
+        if (articleCard && isMobile) {
+            toggleMobileSidebar();
+        }
     });
-    applyState();
+
+    // --- Desktop Sidebar (Collapse) ---
+    let isDesktopCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+
+    const applyDesktopState = () => {
+        elements.appView.classList.toggle('sidebar-collapsed', isDesktopCollapsed);
+    };
+
+    elements.sidebarToggle.addEventListener('click', () => {
+        isDesktopCollapsed = !isDesktopCollapsed;
+        localStorage.setItem('sidebarCollapsed', isDesktopCollapsed);
+        applyDesktopState();
+    });
+
+    // Apply initial state on page load for desktop
+    if (window.innerWidth >= 768) { // Tailwind's `md` breakpoint
+        applyDesktopState();
+    }
 }
+
 
 function setupProgressBar() {
     elements.articleView.addEventListener('scroll', () => {
