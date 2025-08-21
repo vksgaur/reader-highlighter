@@ -102,9 +102,25 @@
         #app-view.sidebar-collapsed #sidebar-toggle-icon {
             transform: rotate(180deg);
         }
+        /* NEW: Styles for Toast Notification */
+        #toast-notification {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="dark:text-slate-200 bg-slate-50 dark:bg-slate-950">
+
+    <!-- NEW: Toast Notification Container -->
+    <div id="toast-notification" class="fixed top-0 right-0 left-0 md:left-auto md:top-5 md:right-5 p-4 max-w-sm w-full rounded-lg shadow-lg bg-red-500 text-white z-[9999] transform -translate-y-20 opacity-0" role="alert">
+        <div class="flex items-center">
+            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+                <p id="toast-title" class="font-bold">Error</p>
+                <p id="toast-message" class="text-sm">Something went wrong.</p>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Initial Loader -->
     <div id="initial-loader" class="h-screen w-screen flex flex-col items-center justify-center text-slate-600 dark:text-slate-300">
@@ -317,6 +333,8 @@
     
     <!-- Main application script -->
     <script type="module" src="./main.js"></script>
+    <!-- NEW: Script for notifications -->
+    <script type="module" src="./notifications.js"></script>
 
 </body>
 </html>

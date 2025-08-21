@@ -1,5 +1,6 @@
 import { GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { auth } from './firebase.js'; // Import the initialized auth service
+import { showToast } from './notifications.js'; // Import the new toast function
 
 const googleSignInBtn = document.getElementById('google-signin-btn');
 const userInfo = document.getElementById('user-info');
@@ -10,6 +11,8 @@ const signIn = () => {
     const provider = new GoogleAuthProvider();
     signInWithPopup(auth, provider).catch(error => {
         console.error("Google Sign-In failed:", error);
+        // Display a user-friendly error message
+        showToast("Sign-in failed. Please try again.", "Authentication Error");
     });
 };
 

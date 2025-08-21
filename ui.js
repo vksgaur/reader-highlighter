@@ -1,4 +1,5 @@
 import * as db from './firestore.js';
+import { showToast } from './notifications.js'; // Import the toast function
 
 // --- DOM Element References ---
 const elements = {
@@ -425,7 +426,10 @@ async function handleUrlFormSubmit(e) {
 
     } catch (error) {
         console.error("Failed to fetch or parse article:", error);
-        elements.articleContent.innerHTML = `<p class="text-red-500">Sorry, we couldn't fetch that article. Please check the URL or try another one. Error: ${error.message}</p>`;
+        // Display a user-friendly error message
+        showToast("Could not fetch the article. Please check the URL or try another one.", "Fetch Error");
+        elements.articleContent.innerHTML = '';
+        elements.placeholder.style.display = 'block'; // Show the placeholder again
     } finally {
         elements.loaderMain.style.display = 'none';
         elements.urlForm.reset();
