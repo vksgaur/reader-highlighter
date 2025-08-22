@@ -1,5 +1,5 @@
 import * as db from './firestore.js';
-import { showToast } from './notifications.js'; // Import the toast function
+import { showToast } from './notifications.js';
 
 // --- DOM Element References ---
 const elements = {
@@ -30,8 +30,8 @@ const elements = {
     sidebar: document.getElementById('sidebar'),
     sidebarToggle: document.getElementById('sidebar-toggle'),
     sidebarToggleIcon: document.getElementById('sidebar-toggle-icon'),
-    mobileMenuBtn: document.getElementById('mobile-menu-btn'), // New
-    sidebarBackdrop: document.getElementById('sidebar-backdrop'), // New
+    mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+    sidebarBackdrop: document.getElementById('sidebar-backdrop'),
     progressBar: document.getElementById('progress-bar'),
     addNoteModal: document.getElementById('add-note-modal'),
     noteHighlightContext: document.getElementById('note-highlight-context'),
@@ -146,6 +146,25 @@ function renderTagFilters(allUserArticles) {
     });
 }
 
+/**
+ * NEW: Helper function to create action buttons for the article cards.
+ * @param {object} options - The options for the button.
+ * @param {string} options.baseClass - Base CSS classes for the button.
+ * @param {string} options.iconHTML - The inner HTML (usually an SVG) for the icon.
+ * @param {function} options.onClick - The function to call when the button is clicked.
+ * @returns {HTMLButtonElement} The created button element.
+ */
+function createActionButton({ baseClass, iconHTML, onClick }) {
+    const button = document.createElement('button');
+    button.className = baseClass;
+    button.innerHTML = iconHTML;
+    button.onclick = (e) => {
+        e.stopPropagation(); // Prevent the article card from being clicked
+        onClick();
+    };
+    return button;
+}
+
 function createArticleCard(article) {
     const articleEl = document.createElement('div');
     articleEl.className = `group p-4 m-1 rounded-lg border flex justify-between items-start transition-all duration-200 ${article.id === currentArticleId ? 'bg-indigo-50 dark:bg-slate-800 border-indigo-500' : 'bg-white dark:bg-slate-800/50 border-transparent hover:border-slate-300 dark:hover:border-slate-700'}`;
@@ -212,30 +231,33 @@ function createArticleCard(article) {
     const rightColumn = document.createElement('div');
     rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity';
 
-    const favoriteBtn = document.createElement('button');
-    favoriteBtn.className = `favorite-btn p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 ${article.isFavorite ? 'favorited' : ''}`;
-    favoriteBtn.innerHTML = `<svg class="w-5 h-5 empty-star text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg><svg class="w-5 h-5 filled-star text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>`;
-    favoriteBtn.onclick = (e) => { e.stopPropagation(); db.toggleFavorite(article.id, article.isFavorite || false); };
+    // REFACTORED: Use the helper function to create buttons
+    const favoriteBtn = createActionButton({
+        baseClass: `favorite-btn p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 ${article.isFavorite ? 'favorited' : ''}`,
+        iconHTML: `<svg class="w-5 h-5 empty-star text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg><svg class="w-5 h-5 filled-star text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>`,
+        onClick: () => db.toggleFavorite(article.id, article.isFavorite || false)
+    });
 
-    const archiveBtn = document.createElement('button');
-    archiveBtn.className = 'p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600';
-    archiveBtn.innerHTML = isShowingArchived
-        ? `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>`
-        : `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h4a2 2 0 002-2V7m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v2m-6 0h6"></path></svg>`;
-    archiveBtn.onclick = async (e) => {
-        e.stopPropagation();
-        await db.toggleArchive(article.id, article.isArchived || false);
-        if (currentArticleId === article.id) {
-            currentArticleId = null;
-            elements.articleContent.innerHTML = '';
-            elements.placeholder.style.display = 'block';
+    const archiveBtn = createActionButton({
+        baseClass: 'p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600',
+        iconHTML: isShowingArchived
+            ? `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>`
+            : `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h4a2 2 0 002-2V7m-6 0V5a2 2 0 012-2h2a2 2 0 012 2v2m-6 0h6"></path></svg>`,
+        onClick: async () => {
+            await db.toggleArchive(article.id, article.isArchived || false);
+            if (currentArticleId === article.id) {
+                currentArticleId = null;
+                elements.articleContent.innerHTML = '';
+                elements.placeholder.style.display = 'block';
+            }
         }
-    };
+    });
     
-    const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '&#x2715;';
-    deleteBtn.className = 'text-red-400 hover:text-red-600 font-bold px-2';
-    deleteBtn.onclick = (e) => { e.stopPropagation(); deleteArticle(article.id); };
+    const deleteBtn = createActionButton({
+        baseClass: 'text-red-400 hover:text-red-600 font-bold px-2',
+        iconHTML: '&#x2715;', // 'x' character
+        onClick: () => deleteArticle(article.id)
+    });
     
     rightColumn.appendChild(favoriteBtn);
     rightColumn.appendChild(archiveBtn);
@@ -268,6 +290,7 @@ export async function loadArticle(docId) {
         }
     } catch (error) {
         console.error("Error loading article:", error);
+        showToast("Could not load the selected article.", "Load Error");
     }
 }
 
@@ -284,6 +307,7 @@ async function deleteArticle(docId) {
         }
     } catch (error) {
         console.error("Error deleting article:", error);
+        showToast("Could not delete the article.", "Delete Error");
     }
 }
 
@@ -318,6 +342,7 @@ async function applyHighlight(color, note = '') {
     } catch (error) {
         console.error("Could not create highlight:", error);
         window.getSelection().addRange(currentSelection);
+        showToast("Failed to create highlight.", "Highlight Error");
     }
     
     elements.highlightTooltip.style.display = 'none';
@@ -337,6 +362,7 @@ async function saveHighlights() {
         await db.saveHighlightsToDb(currentArticleId, elements.articleContent.innerHTML, highlights);
     } catch (error) {
         console.error("Error saving highlights:", error);
+        showToast("Could not save changes to highlights.", "Save Error");
     }
 }
 
@@ -426,10 +452,9 @@ async function handleUrlFormSubmit(e) {
 
     } catch (error) {
         console.error("Failed to fetch or parse article:", error);
-        // Display a user-friendly error message
         showToast("Could not fetch the article. Please check the URL or try another one.", "Fetch Error");
         elements.articleContent.innerHTML = '';
-        elements.placeholder.style.display = 'block'; // Show the placeholder again
+        elements.placeholder.style.display = 'block';
     } finally {
         elements.loaderMain.style.display = 'none';
         elements.urlForm.reset();
@@ -447,7 +472,6 @@ function handleSurpriseMe() {
     }
 }
 
-// --- REVISED AND FIXED: Dark mode logic ---
 function setupDarkMode() {
     const applyTheme = () => {
         const theme = localStorage.getItem('theme');
