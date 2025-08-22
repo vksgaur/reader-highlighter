@@ -13,7 +13,6 @@ let isShowingArchived = false;
 let currentSelection = null;
 let currentEditingHighlight = null;
 
-
 /**
  * Caches all the DOM elements needed for the UI.
  * This should be called once the DOM is fully loaded.
@@ -69,7 +68,7 @@ function cacheDOMElements() {
 
 // --- Main UI Rendering ---
 
-export function renderSidebar(allUserArticles, tagMetadata) {
+export function renderSidebar(allUserArticles, tagMetadata = {}) {
     if (!elements.loaderSidebar) return; // Guard against premature calls
     elements.loaderSidebar.style.display = 'none';
     let articlesToDisplay = [...allUserArticles];
@@ -117,7 +116,7 @@ function renderTagFilters(allUserArticles, tagMetadata) {
     allBtn.className = `px-2 py-1 text-xs rounded-md ${!activeTagFilter ? `bg-indigo-600 text-white` : 'bg-slate-200 dark:bg-slate-700'}`;
     allBtn.onclick = () => {
         activeTagFilter = null;
-        renderSidebar(db.getArticles(), db.getTagMetadata());
+        renderSidebar(db.getArticles(), {});
     };
     elements.tagFiltersContainer.appendChild(allBtn);
 
@@ -128,7 +127,7 @@ function renderTagFilters(allUserArticles, tagMetadata) {
         tagBtn.innerHTML = `<span class="w-3 h-3 rounded-full mr-2" style="background-color: ${tagColor}; display: inline-block;"></span>${tag}`;
         tagBtn.onclick = () => {
             activeTagFilter = tag;
-            renderSidebar(db.getArticles(), db.getTagMetadata());
+            renderSidebar(db.getArticles(), {});
         };
         elements.tagFiltersContainer.appendChild(tagBtn);
     });
@@ -157,7 +156,52 @@ function createArticleCard(article, tagMetadata) {
     const rightColumn = document.createElement('div');
     rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity';
 
-    // ... (action buttons logic remains the same)
+    // Favorite button
+    const favoriteBtn = document.createElement('button');
+    favoriteBtn.className = `favorite-btn p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 ${article.isFavorite ? 'favorited' : ''}`;
+    favoriteBtn.innerHTML = `
+        <svg class="w-4 h-4 text-yellow-500 empty-star" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+        </svg>
+        <svg class="w-4 h-4 text-yellow-500 filled-star" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+        </svg>
+    `;
+    favoriteBtn.onclick = (e) => {
+        e.stopPropagation();
+        db.toggleFavorite(article.id, article.isFavorite);
+    };
+
+    // Archive button
+    const archiveBtn = document.createElement('button');
+    archiveBtn.className = 'p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700';
+    const archiveIcon = article.isArchived 
+        ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l3-3m0 0l3 3m-3-3v6m0-6V5a2 2 0 012-2h4a2 2 0 012 2v6.5"></path></svg>`
+        : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8l6 6 6-6"></path></svg>`;
+    archiveBtn.innerHTML = archiveIcon;
+    archiveBtn.title = article.isArchived ? 'Unarchive' : 'Archive';
+    archiveBtn.onclick = (e) => {
+        e.stopPropagation();
+        db.toggleArchive(article.id, article.isArchived);
+    };
+
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'p-1 rounded hover:bg-red-200 dark:hover:bg-red-800 text-red-600';
+    deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+    deleteBtn.title = 'Delete';
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        showConfirmModal(
+            'Delete Article',
+            'Are you sure you want to delete this article? This action cannot be undone.',
+            () => db.deleteArticleFromDb(article.id)
+        );
+    };
+
+    rightColumn.appendChild(favoriteBtn);
+    rightColumn.appendChild(archiveBtn);
+    rightColumn.appendChild(deleteBtn);
 
     topRow.appendChild(leftColumn);
     topRow.appendChild(rightColumn);
@@ -209,7 +253,7 @@ function createArticleCard(article, tagMetadata) {
     return articleEl;
 }
 
-// --- ADDED THIS FUNCTION BACK AND EXPORTED IT ---
+// --- EXPORTED clearUIForSignOut function ---
 export const clearUIForSignOut = () => {
     if (!elements.savedArticlesList) return; // Guard in case this is called before UI is ready
     elements.savedArticlesList.innerHTML = '<p class="p-4 text-sm text-slate-400 dark:text-slate-500">Please sign in to see your articles.</p>';
@@ -221,14 +265,320 @@ export const clearUIForSignOut = () => {
     isShowingArchived = false;
 };
 
+// --- Helper Functions ---
+async function loadArticle(articleId) {
+    if (currentArticleId === articleId) return;
+    
+    currentArticleId = articleId;
+    elements.placeholder.style.display = 'none';
+    elements.loaderMain.style.display = 'block';
+    elements.articleContent.innerHTML = '';
+    
+    try {
+        const article = await db.getArticle(articleId);
+        if (!article) {
+            showToast('Article not found', 'Error');
+            return;
+        }
+        
+        elements.loaderMain.style.display = 'none';
+        elements.articleContent.innerHTML = article.content;
+        
+        // Update URL without page reload
+        const url = new URL(window.location);
+        url.searchParams.set('article', articleId);
+        window.history.replaceState({}, '', url);
+        
+        // Re-render sidebar to update selection
+        renderSidebar(db.getArticles(), {});
+    } catch (error) {
+        console.error('Error loading article:', error);
+        elements.loaderMain.style.display = 'none';
+        showToast('Failed to load article', 'Error');
+    }
+}
+
+function showConfirmModal(title, text, onConfirm) {
+    if (!elements.confirmModal) return;
+    
+    elements.confirmModalTitle.textContent = title;
+    elements.confirmModalText.textContent = text;
+    
+    elements.confirmModal.classList.remove('hidden');
+    elements.confirmModal.classList.add('flex');
+    
+    const handleConfirm = () => {
+        onConfirm();
+        hideConfirmModal();
+        elements.confirmModalConfirmBtn.removeEventListener('click', handleConfirm);
+    };
+    
+    const handleCancel = () => {
+        hideConfirmModal();
+        elements.confirmModalCancelBtn.removeEventListener('click', handleCancel);
+    };
+    
+    elements.confirmModalConfirmBtn.addEventListener('click', handleConfirm);
+    elements.confirmModalCancelBtn.addEventListener('click', handleCancel);
+}
+
+function hideConfirmModal() {
+    if (!elements.confirmModal) return;
+    elements.confirmModal.classList.add('hidden');
+    elements.confirmModal.classList.remove('flex');
+}
+
+// --- Event Handlers ---
+async function handleUrlFormSubmit(e) {
+    e.preventDefault();
+    const url = elements.articleUrlInput.value.trim();
+    if (!url) return;
+
+    elements.placeholder.style.display = 'none';
+    elements.loaderMain.style.display = 'block';
+    elements.articleContent.innerHTML = '';
+
+    try {
+        // Fetch the webpage
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+        const data = await response.json();
+        
+        if (!response.ok || !data.contents) {
+            throw new Error('Failed to fetch the article');
+        }
+
+        // Parse the HTML and extract article content using Readability
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, 'text/html');
+        const reader = new Readability(doc);
+        const article = reader.parse();
+
+        if (!article) {
+            throw new Error('Could not extract article content from this URL');
+        }
+
+        // Save to database
+        const articleData = {
+            title: article.title,
+            content: article.content,
+            url: url,
+            readingTime: Math.ceil(article.length / 1000) // Rough estimate: 1000 chars per minute
+        };
+
+        const docRef = await db.saveArticle(articleData);
+        currentArticleId = docRef.id;
+
+        // Display the article
+        elements.loaderMain.style.display = 'none';
+        elements.articleContent.innerHTML = article.content;
+        elements.articleUrlInput.value = '';
+
+        showToast('Article saved successfully!', 'Success', 'success');
+
+    } catch (error) {
+        console.error('Error fetching article:', error);
+        elements.loaderMain.style.display = 'none';
+        elements.placeholder.style.display = 'block';
+        showToast(error.message, 'Error');
+    }
+}
+
+function handleSurpriseMe() {
+    const articles = db.getArticles().filter(article => !article.isArchived);
+    if (articles.length === 0) {
+        showToast('No articles available', 'Info', 'info');
+        return;
+    }
+    
+    const randomArticle = articles[Math.floor(Math.random() * articles.length)];
+    loadArticle(randomArticle.id);
+}
+
+// --- Setup Functions ---
+function setupDarkMode() {
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add(CSS_CLASSES.DARK);
+        elements.lightIcon.classList.add(CSS_CLASSES.HIDDEN);
+        elements.darkIcon.classList.remove(CSS_CLASSES.HIDDEN);
+    } else {
+        elements.darkIcon.classList.add(CSS_CLASSES.HIDDEN);
+        elements.lightIcon.classList.remove(CSS_CLASSES.HIDDEN);
+    }
+
+    elements.themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle(CSS_CLASSES.DARK);
+        elements.lightIcon.classList.toggle(CSS_CLASSES.HIDDEN);
+        elements.darkIcon.classList.toggle(CSS_CLASSES.HIDDEN);
+        
+        const currentTheme = document.documentElement.classList.contains(CSS_CLASSES.DARK) ? 'dark' : 'light';
+        localStorage.setItem(STORAGE_KEYS.THEME, currentTheme);
+    });
+}
+
+function setupViewToggle() {
+    elements.viewActiveBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+    
+    elements.viewActiveBtn.addEventListener('click', () => {
+        if (isShowingArchived) {
+            isShowingArchived = false;
+            elements.viewActiveBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+            elements.viewArchivedBtn.classList.remove(...CSS_CLASSES.ACTIVE_BUTTON);
+            renderSidebar(db.getArticles(), {});
+        }
+    });
+
+    elements.viewArchivedBtn.addEventListener('click', () => {
+        if (!isShowingArchived) {
+            isShowingArchived = true;
+            elements.viewArchivedBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+            elements.viewActiveBtn.classList.remove(...CSS_CLASSES.ACTIVE_BUTTON);
+            renderSidebar(db.getArticles(), {});
+        }
+    });
+}
+
+function setupReaderSettings() {
+    // Create reader settings menu content
+    elements.readerSettingsMenu.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-2">Theme</label>
+                <div class="flex gap-2">
+                    <button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="light">Light</button>
+                    <button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="sepia">Sepia</button>
+                    <button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="dark">Dark</button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-2">Font Size</label>
+                <div class="flex gap-2">
+                    <button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="small">Small</button>
+                    <button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="medium">Medium</button>
+                    <button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="large">Large</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Load saved settings
+    const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.READER_SETTINGS) || '{"theme": "light", "fontSize": "medium"}');
+    applyReaderSettings(savedSettings);
+
+    // Setup event listeners
+    elements.readerSettingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        elements.readerSettingsMenu.classList.toggle('hidden');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!elements.readerSettingsMenu.contains(e.target) && !elements.readerSettingsBtn.contains(e.target)) {
+            elements.readerSettingsMenu.classList.add('hidden');
+        }
+    });
+
+    // Theme buttons
+    elements.readerSettingsMenu.addEventListener('click', (e) => {
+        if (e.target.matches('.theme-btn')) {
+            const theme = e.target.dataset.theme;
+            savedSettings.theme = theme;
+            applyReaderSettings(savedSettings);
+            localStorage.setItem(STORAGE_KEYS.READER_SETTINGS, JSON.stringify(savedSettings));
+        }
+
+        if (e.target.matches('.font-size-btn')) {
+            const fontSize = e.target.dataset.size;
+            savedSettings.fontSize = fontSize;
+            applyReaderSettings(savedSettings);
+            localStorage.setItem(STORAGE_KEYS.READER_SETTINGS, JSON.stringify(savedSettings));
+        }
+    });
+}
+
+function applyReaderSettings(settings) {
+    // Apply theme
+    elements.articleContentWrapper.className = elements.articleContentWrapper.className.replace(/theme-\w+/g, '');
+    elements.articleContentWrapper.classList.add(`theme-${settings.theme}`);
+
+    // Apply font size
+    elements.articleContentWrapper.className = elements.articleContentWrapper.className.replace(/text-(sm|base|lg|xl)/g, '');
+    const fontSizeClass = {
+        small: 'text-sm',
+        medium: 'text-base',
+        large: 'text-lg'
+    }[settings.fontSize] || 'text-base';
+    elements.articleContentWrapper.classList.add(fontSizeClass);
+
+    // Update active buttons
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === settings.theme);
+    });
+
+    document.querySelectorAll('.font-size-btn').forEach(btn => {
+        const isActive = btn.dataset.size === settings.fontSize;
+        btn.classList.toggle(CSS_CLASSES.READER_SETTING_ACTIVE, isActive);
+        btn.classList.toggle('bg-slate-200', !isActive);
+        btn.classList.toggle('dark:bg-slate-600', !isActive);
+    });
+}
+
+function setupSidebarToggle() {
+    const savedCollapsed = localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === 'true';
+    if (savedCollapsed) {
+        elements.appView.classList.add(CSS_CLASSES.SIDEBAR_COLLAPSED);
+    }
+
+    elements.sidebarToggle.addEventListener('click', () => {
+        elements.appView.classList.toggle(CSS_CLASSES.SIDEBAR_COLLAPSED);
+        const isCollapsed = elements.appView.classList.contains(CSS_CLASSES.SIDEBAR_COLLAPSED);
+        localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, isCollapsed.toString());
+    });
+
+    // Mobile menu
+    elements.mobileMenuBtn.addEventListener('click', () => {
+        elements.sidebar.classList.toggle(CSS_CLASSES.SIDEBAR_TRANSLATE_FULL);
+        elements.sidebarBackdrop.classList.toggle(CSS_CLASSES.HIDDEN);
+    });
+
+    elements.sidebarBackdrop.addEventListener('click', () => {
+        elements.sidebar.classList.add(CSS_CLASSES.SIDEBAR_TRANSLATE_FULL);
+        elements.sidebarBackdrop.classList.add(CSS_CLASSES.HIDDEN);
+    });
+}
+
+function setupHighlighting() {
+    // Text selection and highlighting logic would go here
+    // This is a placeholder for the highlighting functionality
+}
+
+function setupModals() {
+    // Setup for various modals would go here
+    // This is a placeholder for modal functionality
+}
+
+function setupTagManagement() {
+    if (elements.manageTagsBtn) {
+        elements.manageTagsBtn.addEventListener('click', () => {
+            elements.tagManagementModal.classList.remove('hidden');
+            elements.tagManagementModal.classList.add('flex');
+        });
+    }
+
+    if (elements.closeTagModalBtn) {
+        elements.closeTagModalBtn.addEventListener('click', () => {
+            elements.tagManagementModal.classList.add('hidden');
+            elements.tagManagementModal.classList.remove('flex');
+        });
+    }
+}
 
 // --- Initial Setup ---
-
 export function initializeUI() {
     cacheDOMElements(); 
     
     elements.urlForm.addEventListener('submit', handleUrlFormSubmit);
-    elements.searchInput.addEventListener('input', () => renderSidebar(db.getArticles(), db.getTagMetadata()));
+    elements.searchInput.addEventListener('input', () => renderSidebar(db.getArticles(), {}));
     elements.surpriseMeBtn.addEventListener('click', handleSurpriseMe);
     
     setupDarkMode();
@@ -239,8 +589,3 @@ export function initializeUI() {
     setupModals();
     setupTagManagement();
 }
-
-// ... All other functions like handleUrlFormSubmit, setupDarkMode, setupHighlighting, etc., go here ...
-// (Make sure the rest of your functions from the previous version are included below)
-
-
