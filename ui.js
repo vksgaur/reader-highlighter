@@ -4,7 +4,7 @@ import { STORAGE_KEYS, CSS_CLASSES, HIGHLIGHT_COLORS } from './constants.js';
 
 // --- DOM Element References ---
 const elements = {
-    appView: document.getElementById('app-view'), // Main container
+    appView: document.getElementById('app-view'),
     urlForm: document.getElementById('url-form'),
     articleUrlInput: document.getElementById('article-url'),
     articleView: document.getElementById('article-view'),
@@ -30,10 +30,8 @@ const elements = {
     readerSettingsMenu: document.getElementById('reader-settings-menu'),
     sidebar: document.getElementById('sidebar'),
     sidebarToggle: document.getElementById('sidebar-toggle'),
-    sidebarToggleIcon: document.getElementById('sidebar-toggle-icon'),
     mobileMenuBtn: document.getElementById('mobile-menu-btn'),
     sidebarBackdrop: document.getElementById('sidebar-backdrop'),
-    progressBar: document.getElementById('progress-bar'),
     addNoteModal: document.getElementById('add-note-modal'),
     noteHighlightContext: document.getElementById('note-highlight-context'),
     noteTextarea: document.getElementById('note-textarea'),
@@ -41,7 +39,6 @@ const elements = {
     cancelNoteBtn: document.getElementById('cancel-note-btn'),
     searchInput: document.getElementById('search-input'),
     surpriseMeBtn: document.getElementById('surprise-me-btn'),
-    imageExportContainer: document.getElementById('image-export-container'),
     confirmModal: document.getElementById('confirm-modal'),
     confirmModalTitle: document.getElementById('confirm-modal-title'),
     confirmModalText: document.getElementById('confirm-modal-text'),
@@ -175,8 +172,6 @@ function createArticleCard(article) {
     textContainer.addEventListener('click', () => loadArticle(article.id));
     
     leftColumn.appendChild(textContainer);
-
-    // ... (rest of the card creation logic is the same)
 
     const rightColumn = document.createElement('div');
     rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity';
@@ -320,17 +315,28 @@ let readerSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.READER_SETTING
     fontSize: 'base',
     fontFamily: 'sans',
     lineHeight: 'relaxed',
-    lineWidth: '3xl'
+    lineWidth: '3xl',
+    theme: 'light' // NEW: Add default theme
 };
 
 function applyReaderSettings() {
-    const { fontSize, fontFamily, lineHeight, lineWidth } = readerSettings;
+    const { fontSize, fontFamily, lineHeight, lineWidth, theme } = readerSettings;
+    
+    // Font size and family
     elements.articleContentWrapper.classList.remove('text-sm', 'text-base', 'text-lg', 'font-sans', 'font-serif');
     elements.articleContentWrapper.classList.add(`text-${fontSize}`, `font-${fontFamily}`);
+    
+    // Line height
     elements.articleContent.classList.remove('leading-normal', 'leading-relaxed', 'leading-loose');
     elements.articleContent.classList.add(`leading-${lineHeight}`);
+
+    // Line width
     elements.articleContentWrapper.classList.remove('max-w-2xl', 'max-w-3xl', 'max-w-5xl');
     elements.articleContentWrapper.classList.add(`max-w-${lineWidth}`);
+
+    // NEW: Apply theme
+    elements.articleContentWrapper.classList.remove('theme-light', 'theme-sepia', 'theme-dark');
+    elements.articleContentWrapper.classList.add(`theme-${theme}`);
 }
 
 // --- Initial Setup for UI components ---
@@ -344,7 +350,6 @@ export function initializeUI() {
     setupViewToggle();
     setupReaderSettings();
     setupSidebarToggle();
-    setupProgressBar();
     setupHighlighting();
     setupModals();
 }
@@ -417,7 +422,7 @@ function handleSurpriseMe() {
         const randomIndex = Math.floor(Math.random() * activeArticles.length);
         loadArticle(activeArticles[randomIndex].id);
     } else {
-        showConfirmation('No Articles Found', 'There are no active articles to choose from.', 'bg-indigo-600');
+        showToast('No active articles to choose from.', 'Surprise Me');
     }
 }
 
@@ -472,6 +477,8 @@ function setupReaderSettings() {
         document.querySelectorAll('.font-family-btn').forEach(btn => btn.classList.toggle(CSS_CLASSES.READER_SETTING_ACTIVE, btn.dataset.font === readerSettings.fontFamily));
         document.querySelectorAll('.line-height-btn').forEach(btn => btn.classList.toggle(CSS_CLASSES.READER_SETTING_ACTIVE, btn.dataset.leading === readerSettings.lineHeight));
         document.querySelectorAll('.line-width-btn').forEach(btn => btn.classList.toggle(CSS_CLASSES.READER_SETTING_ACTIVE, btn.dataset.width === readerSettings.lineWidth));
+        // NEW: Update theme buttons
+        document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === readerSettings.theme));
     }
 
     elements.readerSettingsBtn.addEventListener('click', (e) => {
@@ -493,6 +500,8 @@ function setupReaderSettings() {
         if (target.dataset.font) readerSettings.fontFamily = target.dataset.font;
         if (target.dataset.leading) readerSettings.lineHeight = target.dataset.leading;
         if (target.dataset.width) readerSettings.lineWidth = target.dataset.width;
+        // NEW: Handle theme change
+        if (target.dataset.theme) readerSettings.theme = target.dataset.theme;
         
         localStorage.setItem(STORAGE_KEYS.READER_SETTINGS, JSON.stringify(readerSettings));
         applyReaderSettings();
@@ -535,15 +544,6 @@ function setupSidebarToggle() {
     if (window.innerWidth >= 768) {
         applyDesktopState();
     }
-}
-
-
-function setupProgressBar() {
-    elements.articleView.addEventListener('scroll', () => {
-        const scrollableHeight = elements.articleView.scrollHeight - elements.articleView.clientHeight;
-        const progress = scrollableHeight > 0 ? (elements.articleView.scrollTop / scrollableHeight) * 100 : 0;
-        elements.progressBar.style.width = `${progress}%`;
-    });
 }
 
 function setupHighlighting() {
