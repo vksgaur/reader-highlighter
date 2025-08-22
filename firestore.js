@@ -13,7 +13,7 @@ export const setupFirestoreListeners = (userId) => {
     }
     articlesCollectionRef = collection(db, `artifacts/read-highlight-app/users/${userId}/articles`);
     const q = query(articlesCollectionRef);
-    
+
     unsubscribe = onSnapshot(q, (snapshot) => {
         allUserArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderSidebar(allUserArticles);
@@ -91,6 +91,12 @@ export const saveArticle = async (articleData) => {
     });
 };
 
+/**
+ * Saves the highlights and the updated content to Firestore.
+ * @param {string} docId - The ID of the article document.
+ * @param {string} content - The full HTML content of the article with <mark> tags.
+ * @param {Array} highlights - An array of highlight objects.
+ */
 export const saveHighlightsToDb = async (docId, content, highlights) => {
     if (!checkCollectionRef()) return;
     const docRef = doc(articlesCollectionRef, docId);

@@ -21,7 +21,7 @@ export const CSS_CLASSES = {
     // Sidebar
     SIDEBAR_COLLAPSED: 'sidebar-collapsed',
     SIDEBAR_TRANSLATE_FULL: '-translate-x-full',
-    
+
     // Article Card States
     SELECTED_CARD: ['bg-indigo-50', 'dark:bg-slate-800', 'border-indigo-500'],
     DEFAULT_CARD: ['bg-white', 'dark:bg-slate-800/50', 'border-transparent'],
@@ -41,10 +41,10 @@ export const CSS_CLASSES = {
     CONFIRM_BUTTON_HOVER_RED: 'hover:bg-red-700',
 };
 
-// Highlight Colors
+// Highlight Colors - New soft, modern palette
 export const HIGHLIGHT_COLORS = {
-    YELLOW: 'yellow',
-    PINK: 'pink',
-    SKY: 'sky',
-    GREEN: 'green',
+    YELLOW: { name: 'yellow', class: 'highlight-yellow', hex: '#FFF2AC' },
+    PINK: { name: 'pink', class: 'highlight-pink', hex: '#FFD1DC' },
+    SKY: { name: 'sky', class: 'highlight-sky', hex: '#BDE0FE' },
+    GREEN: { name: 'green', class: 'highlight-green', hex: '#C8E6C9' },
 };
