@@ -27,13 +27,13 @@ function cacheDOMElements() {
         loaderMain: document.getElementById('loader-main'),
         loaderSidebar: document.getElementById('loader-sidebar'),
         savedArticlesList: document.getElementById('saved-articles-list'),
-
+        
         // Highlighting elements
         highlightTooltip: document.getElementById('highlight-tooltip'),
         editHighlightTooltip: document.getElementById('edit-highlight-tooltip'),
         addNoteBtn: document.getElementById('add-note-btn'),
         deleteHighlightBtn: document.getElementById('delete-highlight-btn'),
-
+        
         // Note Modal elements
         addNoteModal: document.getElementById('add-note-modal'),
         noteHighlightContext: document.getElementById('note-highlight-context'),
@@ -111,7 +111,7 @@ function renderTagFilters(allUserArticles, tagMetadata) {
     const viewableArticlesForTags = allUserArticles.filter(article => (article.isArchived || false) === isShowingArchived);
     const allTags = new Set(viewableArticlesForTags.flatMap(article => article.tags || []));
     elements.tagFiltersContainer.innerHTML = '';
-
+    
     const allBtn = document.createElement('button');
     allBtn.textContent = 'All';
     allBtn.className = `px-2 py-1 text-xs rounded-md ${!activeTagFilter ? `bg-indigo-600 text-white` : 'bg-slate-200 dark:bg-slate-700'}`;
@@ -139,7 +139,7 @@ function createArticleCard(article, tagMetadata) {
     const isSelected = article.id === currentArticleId;
     articleEl.className = `group p-4 m-1 rounded-lg border flex flex-col justify-between items-start transition-all duration-200 ${isSelected ? 'bg-indigo-50 dark:bg-slate-800 border-indigo-500' : 'bg-white dark:bg-slate-800/50 border-transparent'}`;
     articleEl.dataset.id = article.id;
-
+    
     const topRow = document.createElement('div');
     topRow.className = 'w-full flex justify-between items-start';
 
@@ -151,14 +151,12 @@ function createArticleCard(article, tagMetadata) {
     const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
     textContainer.innerHTML = `<h3 class="font-semibold text-slate-800 dark:text-slate-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-slate-500 dark:text-slate-400 truncate">${article.url}</p><p class="text-xs text-slate-400 dark:text-slate-500 mt-1">${(article.highlights?.length || 0)} highlights${readingTimeInfo}</p>`;
     textContainer.addEventListener('click', () => loadArticle(article.id));
-
+    
     leftColumn.appendChild(textContainer);
 
     const rightColumn = document.createElement('div');
     rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity';
 
-    // Favorite button, Archive button, Delete button... (code unchanged)
-    // ... (previous button creation code remains here) ...
     const favoriteBtn = document.createElement('button');
     favoriteBtn.className = `favorite-btn p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 ${article.isFavorite ? 'favorited' : ''}`;
     favoriteBtn.innerHTML = `<svg class="w-4 h-4 text-yellow-500 empty-star" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg><svg class="w-4 h-4 text-yellow-500 filled-star" fill="currentColor" viewBox="0 0 24 24"><path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>`;
@@ -183,7 +181,7 @@ function createArticleCard(article, tagMetadata) {
 
     const tagsContainer = document.createElement('div');
     tagsContainer.className = 'mt-2 w-full flex items-center flex-wrap gap-2';
-
+    
     (article.tags || []).forEach(tag => {
         const tagEl = document.createElement('span');
         const tagColor = tagMetadata[tag]?.color || '#94a3b8';
@@ -205,7 +203,7 @@ function createArticleCard(article, tagMetadata) {
     tagsContainer.appendChild(addTagBtn);
     tagsContainer.appendChild(addTagInput);
     articleEl.appendChild(tagsContainer);
-
+    
     return articleEl;
 }
 
@@ -220,30 +218,29 @@ export const clearUIForSignOut = () => {
     isShowingArchived = false;
 };
 
-// --- Helper Functions ---
 async function loadArticle(articleId) {
     if (currentArticleId === articleId) return;
-
+    
     hideTooltips();
     currentArticleId = articleId;
     elements.placeholder.style.display = 'none';
     elements.loaderMain.style.display = 'block';
     elements.articleContent.innerHTML = '';
-
+    
     try {
         const article = await db.getArticle(articleId);
         if (!article) {
             showToast('Article not found', 'Error');
             return;
         }
-
+        
         elements.loaderMain.style.display = 'none';
         elements.articleContent.innerHTML = article.content;
-
+        
         const url = new URL(window.location);
         url.searchParams.set('article', articleId);
         window.history.replaceState({}, '', url);
-
+        
         renderSidebar(db.getArticles(), {});
     } catch (error) {
         console.error('Error loading article:', error);
@@ -253,14 +250,29 @@ async function loadArticle(articleId) {
 }
 
 function showConfirmModal(title, text, onConfirm) {
-    // ... (unchanged) ...
+    if (!elements.confirmModal) return;
+    elements.confirmModalTitle.textContent = title;
+    elements.confirmModalText.textContent = text;
+    elements.confirmModal.classList.remove('hidden');
+    elements.confirmModal.classList.add('flex');
+    const handleConfirm = () => {
+        onConfirm();
+        hideConfirmModal();
+        elements.confirmModalConfirmBtn.removeEventListener('click', handleConfirm);
+    };
+    const handleCancel = () => {
+        hideConfirmModal();
+        elements.confirmModalCancelBtn.removeEventListener('click', handleCancel);
+    };
+    elements.confirmModalConfirmBtn.addEventListener('click', handleConfirm);
+    elements.confirmModalCancelBtn.addEventListener('click', handleCancel);
 }
 
 function hideConfirmModal() {
-    // ... (unchanged) ...
+    if (!elements.confirmModal) return;
+    elements.confirmModal.classList.add('hidden');
+    elements.confirmModal.classList.remove('flex');
 }
-
-// --- Highlighting Logic ---
 
 /**
  * Shows the highlight creation tooltip positioned relative to the selected text.
@@ -269,7 +281,7 @@ function hideConfirmModal() {
 function showHighlightTooltip(range) {
     const rect = range.getBoundingClientRect();
     elements.highlightTooltip.style.display = 'flex';
-    elements.highlightTooltip.style.left = `${rect.left + window.scrollX}px`;
+    elements.highlightTooltip.style.left = `${rect.left + window.scrollX + (rect.width / 2) - (elements.highlightTooltip.offsetWidth / 2)}px`;
     elements.highlightTooltip.style.top = `${rect.top + window.scrollY - elements.highlightTooltip.offsetHeight - 8}px`;
 }
 
@@ -280,7 +292,7 @@ function showHighlightTooltip(range) {
 function showEditHighlightTooltip(highlightEl) {
     const rect = highlightEl.getBoundingClientRect();
     elements.editHighlightTooltip.style.display = 'flex';
-    elements.editHighlightTooltip.style.left = `${rect.left + window.scrollX}px`;
+    elements.editHighlightTooltip.style.left = `${rect.left + window.scrollX + (rect.width / 2) - (elements.editHighlightTooltip.offsetWidth / 2)}px`;
     elements.editHighlightTooltip.style.top = `${rect.bottom + window.scrollY + 4}px`;
 }
 
@@ -296,6 +308,7 @@ function hideTooltips() {
 
 /**
  * Wraps the current text selection in a <mark> tag with the specified color.
+ * This is a more robust version that can handle selections spanning multiple elements.
  * @param {string} colorName - The name of the color (e.g., 'yellow').
  */
 function createHighlight(colorName) {
@@ -304,25 +317,52 @@ function createHighlight(colorName) {
     const color = HIGHLIGHT_COLORS[colorName.toUpperCase()];
     if (!color) return;
 
-    // Create the <mark> element
-    const highlightEl = document.createElement('mark');
-    highlightEl.className = `highlight ${color.class}`;
-    highlightEl.dataset.highlightId = `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    highlightEl.dataset.color = color.name;
+    const uniqueId = `highlight-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    try {
-        // Surround the selected content with the new element
-        currentSelection.surroundContents(highlightEl);
-        saveHighlights();
-    } catch (e) {
-        // This can happen if the selection spans across different block-level elements.
-        // For simplicity, we'll show an error. A more advanced implementation would split the highlight.
-        console.error("Highlighting failed:", e);
-        showToast("Cannot highlight across different paragraphs or sections.", "Highlight Error");
-    } finally {
-        hideTooltips();
+    // The selection might span multiple nodes. We need to wrap each text node part.
+    const fragment = currentSelection.extractContents();
+    const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeValue.trim() !== '') {
+            const mark = document.createElement('mark');
+            mark.className = `highlight ${color.class}`;
+            mark.dataset.highlightId = uniqueId;
+            mark.dataset.color = color.name;
+            mark.textContent = node.nodeValue;
+            node.parentNode.replaceChild(mark, node);
+        }
+    }
+
+    currentSelection.insertNode(fragment);
+    
+    // After creating, we might have adjacent <mark> tags with the same ID. Let's merge them.
+    normalizeHighlights(uniqueId);
+
+    saveHighlights();
+    hideTooltips();
+}
+
+/**
+ * Merges adjacent <mark> elements with the same highlight ID.
+ * This cleans up the DOM after creating a highlight that spans multiple nodes.
+ * @param {string} highlightId - The ID of the highlight to normalize.
+ */
+function normalizeHighlights(highlightId) {
+    const highlights = elements.articleContent.querySelectorAll(`mark[data-highlight-id="${highlightId}"]`);
+    if (highlights.length <= 1) return;
+
+    for (let i = highlights.length - 1; i > 0; i--) {
+        const current = highlights[i];
+        const prev = highlights[i - 1];
+
+        if (prev.nextSibling === current) {
+            prev.textContent += current.textContent;
+            current.parentNode.removeChild(current);
+        }
     }
 }
+
 
 /**
  * Gathers all highlight data from the DOM and saves it to Firestore.
@@ -347,14 +387,18 @@ async function saveHighlights() {
  */
 function deleteHighlight() {
     if (!currentEditingHighlight) return;
+    
+    const highlightId = currentEditingHighlight.dataset.highlightId;
+    const allParts = elements.articleContent.querySelectorAll(`mark[data-highlight-id="${highlightId}"]`);
 
-    // Unwrap the content of the <mark> tag
-    const parent = currentEditingHighlight.parentNode;
-    while (currentEditingHighlight.firstChild) {
-        parent.insertBefore(currentEditingHighlight.firstChild, currentEditingHighlight);
-    }
-    parent.removeChild(currentEditingHighlight);
-
+    allParts.forEach(part => {
+        const parent = part.parentNode;
+        while (part.firstChild) {
+            parent.insertBefore(part.firstChild, part);
+        }
+        parent.removeChild(part);
+    });
+    
     saveHighlights();
     hideTooltips();
 }
@@ -372,34 +416,31 @@ function showNoteModal() {
     elements.noteTextarea.focus();
 }
 
-/**
- * Hides the note modal.
- */
 function hideNoteModal() {
     elements.addNoteModal.classList.add('hidden');
     elements.addNoteModal.classList.remove('flex');
     currentEditingHighlight = null;
 }
 
-/**
- * Saves the note from the modal to the highlight's data attribute and persists changes.
- */
 function saveNote() {
     if (!currentEditingHighlight) return;
     const noteText = elements.noteTextarea.value.trim();
-    if (noteText) {
-        currentEditingHighlight.dataset.note = noteText;
-    } else {
-        delete currentEditingHighlight.dataset.note;
-    }
+    const highlightId = currentEditingHighlight.dataset.highlightId;
+    const allParts = elements.articleContent.querySelectorAll(`mark[data-highlight-id="${highlightId}"]`);
+
+    allParts.forEach(part => {
+        if (noteText) {
+            part.dataset.note = noteText;
+        } else {
+            delete part.dataset.note;
+        }
+    });
+
     saveHighlights();
     hideNoteModal();
 }
 
-
-// --- Event Handlers ---
 async function handleUrlFormSubmit(e) {
-    // ... (unchanged) ...
     e.preventDefault();
     const url = elements.articleUrlInput.value.trim();
     if (!url) return;
@@ -431,38 +472,117 @@ async function handleUrlFormSubmit(e) {
 }
 
 function handleSurpriseMe() {
-    // ... (unchanged) ...
+    const articles = db.getArticles().filter(article => !article.isArchived);
+    if (articles.length === 0) {
+        showToast('No articles available', 'Info', 'info');
+        return;
+    }
+    const randomArticle = articles[Math.floor(Math.random() * articles.length)];
+    loadArticle(randomArticle.id);
 }
 
-// --- Setup Functions ---
 function setupDarkMode() {
-    // ... (unchanged) ...
+    const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add(CSS_CLASSES.DARK);
+        elements.lightIcon.classList.add(CSS_CLASSES.HIDDEN);
+        elements.darkIcon.classList.remove(CSS_CLASSES.HIDDEN);
+    } else {
+        elements.darkIcon.classList.add(CSS_CLASSES.HIDDEN);
+        elements.lightIcon.classList.remove(CSS_CLASSES.HIDDEN);
+    }
+    elements.themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle(CSS_CLASSES.DARK);
+        elements.lightIcon.classList.toggle(CSS_CLASSES.HIDDEN);
+        elements.darkIcon.classList.toggle(CSS_CLASSES.HIDDEN);
+        const currentTheme = document.documentElement.classList.contains(CSS_CLASSES.DARK) ? 'dark' : 'light';
+        localStorage.setItem(STORAGE_KEYS.THEME, currentTheme);
+    });
 }
 
 function setupViewToggle() {
-    // ... (unchanged) ...
+    elements.viewActiveBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+    elements.viewActiveBtn.addEventListener('click', () => {
+        if (isShowingArchived) {
+            isShowingArchived = false;
+            elements.viewActiveBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+            elements.viewArchivedBtn.classList.remove(...CSS_CLASSES.ACTIVE_BUTTON);
+            renderSidebar(db.getArticles(), {});
+        }
+    });
+    elements.viewArchivedBtn.addEventListener('click', () => {
+        if (!isShowingArchived) {
+            isShowingArchived = true;
+            elements.viewArchivedBtn.classList.add(...CSS_CLASSES.ACTIVE_BUTTON);
+            elements.viewActiveBtn.classList.remove(...CSS_CLASSES.ACTIVE_BUTTON);
+            renderSidebar(db.getArticles(), {});
+        }
+    });
 }
 
 function setupReaderSettings() {
-    // ... (unchanged) ...
+    elements.readerSettingsMenu.innerHTML = `
+        <div class="space-y-4">
+            <div><label class="block text-sm font-medium mb-2">Theme</label><div class="flex gap-2"><button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="light">Light</button><button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="sepia">Sepia</button><button class="theme-btn px-3 py-2 text-sm rounded border-2" data-theme="dark">Dark</button></div></div>
+            <div><label class="block text-sm font-medium mb-2">Font Size</label><div class="flex gap-2"><button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="small">Small</button><button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="medium">Medium</button><button class="font-size-btn px-3 py-2 text-sm rounded bg-slate-200 dark:bg-slate-600" data-size="large">Large</button></div></div>
+        </div>
+    `;
+    const savedSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.READER_SETTINGS) || '{"theme": "light", "fontSize": "medium"}');
+    applyReaderSettings(savedSettings);
+    elements.readerSettingsBtn.addEventListener('click', (e) => { e.stopPropagation(); elements.readerSettingsMenu.classList.toggle('hidden'); });
+    document.addEventListener('click', (e) => { if (!elements.readerSettingsMenu.contains(e.target) && !elements.readerSettingsBtn.contains(e.target)) { elements.readerSettingsMenu.classList.add('hidden'); } });
+    elements.readerSettingsMenu.addEventListener('click', (e) => {
+        if (e.target.matches('.theme-btn')) {
+            savedSettings.theme = e.target.dataset.theme;
+            applyReaderSettings(savedSettings);
+            localStorage.setItem(STORAGE_KEYS.READER_SETTINGS, JSON.stringify(savedSettings));
+        }
+        if (e.target.matches('.font-size-btn')) {
+            savedSettings.fontSize = e.target.dataset.size;
+            applyReaderSettings(savedSettings);
+            localStorage.setItem(STORAGE_KEYS.READER_SETTINGS, JSON.stringify(savedSettings));
+        }
+    });
 }
 
 function applyReaderSettings(settings) {
-    // ... (unchanged) ...
+    elements.articleContentWrapper.className = elements.articleContentWrapper.className.replace(/theme-\w+/g, '');
+    elements.articleContentWrapper.classList.add(`theme-${settings.theme}`);
+    elements.articleContentWrapper.className = elements.articleContentWrapper.className.replace(/text-(sm|base|lg|xl)/g, '');
+    const fontSizeClass = { small: 'text-sm', medium: 'text-base', large: 'text-lg' }[settings.fontSize] || 'text-base';
+    elements.articleContentWrapper.classList.add(fontSizeClass);
+    document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.theme === settings.theme));
+    document.querySelectorAll('.font-size-btn').forEach(btn => {
+        const isActive = btn.dataset.size === settings.fontSize;
+        btn.classList.toggle(CSS_CLASSES.READER_SETTING_ACTIVE, isActive);
+        btn.classList.toggle('bg-slate-200', !isActive);
+        btn.classList.toggle('dark:bg-slate-600', !isActive);
+    });
 }
 
 function setupSidebarToggle() {
-    // ... (unchanged) ...
+    const savedCollapsed = localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === 'true';
+    if (savedCollapsed) {
+        elements.appView.classList.add(CSS_CLASSES.SIDEBAR_COLLAPSED);
+    }
+    elements.sidebarToggle.addEventListener('click', () => {
+        elements.appView.classList.toggle(CSS_CLASSES.SIDEBAR_COLLAPSED);
+        const isCollapsed = elements.appView.classList.contains(CSS_CLASSES.SIDEBAR_COLLAPSED);
+        localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, isCollapsed.toString());
+    });
+    elements.mobileMenuBtn.addEventListener('click', () => {
+        elements.sidebar.classList.toggle(CSS_CLASSES.SIDEBAR_TRANSLATE_FULL);
+        elements.sidebarBackdrop.classList.toggle(CSS_CLASSES.HIDDEN);
+    });
+    elements.sidebarBackdrop.addEventListener('click', () => {
+        elements.sidebar.classList.add(CSS_CLASSES.SIDEBAR_TRANSLATE_FULL);
+        elements.sidebarBackdrop.classList.add(CSS_CLASSES.HIDDEN);
+    });
 }
 
 function setupHighlighting() {
-    // Show creation tooltip on text selection
     elements.articleContent.addEventListener('mouseup', (e) => {
-        // Don't show tooltip if we are clicking on an existing highlight
-        if (e.target.closest('mark.highlight')) {
-            return;
-        }
-
+        if (e.target.closest('mark.highlight')) return;
         const selection = window.getSelection();
         if (selection.toString().trim().length > 0) {
             currentSelection = selection.getRangeAt(0).cloneRange();
@@ -472,14 +592,12 @@ function setupHighlighting() {
         }
     });
 
-    // Hide tooltips when clicking away
     document.addEventListener('mousedown', (e) => {
         if (!elements.highlightTooltip.contains(e.target) && !elements.editHighlightTooltip.contains(e.target) && !e.target.closest('mark.highlight')) {
             hideTooltips();
         }
     });
 
-    // Handle clicks on the color buttons in the creation tooltip
     elements.highlightTooltip.addEventListener('click', (e) => {
         if (e.target.matches('.highlight-color-btn')) {
             const color = e.target.dataset.color;
@@ -487,27 +605,23 @@ function setupHighlighting() {
         }
     });
 
-    // Show edit tooltip when clicking an existing highlight
     elements.articleContent.addEventListener('click', (e) => {
         const highlightEl = e.target.closest('mark.highlight');
         if (highlightEl) {
-            hideTooltips(); // Hide any other open tooltips
+            hideTooltips();
             currentEditingHighlight = highlightEl;
             showEditHighlightTooltip(highlightEl);
         }
     });
 
-    // Handle clicks on buttons in the edit tooltip
     elements.deleteHighlightBtn.addEventListener('click', deleteHighlight);
     elements.addNoteBtn.addEventListener('click', showNoteModal);
 }
 
 function setupModals() {
-    // Note Modal listeners
     elements.saveNoteBtn.addEventListener('click', saveNote);
     elements.cancelNoteBtn.addEventListener('click', hideNoteModal);
     elements.addNoteModal.addEventListener('click', (e) => {
-        // Close modal if clicking on the backdrop
         if (e.target === elements.addNoteModal) {
             hideNoteModal();
         }
@@ -515,17 +629,25 @@ function setupModals() {
 }
 
 function setupTagManagement() {
-    // ... (unchanged) ...
+    if (elements.manageTagsBtn) {
+        elements.manageTagsBtn.addEventListener('click', () => {
+            elements.tagManagementModal.classList.remove('hidden');
+            elements.tagManagementModal.classList.add('flex');
+        });
+    }
+    if (elements.closeTagModalBtn) {
+        elements.closeTagModalBtn.addEventListener('click', () => {
+            elements.tagManagementModal.classList.add('hidden');
+            elements.tagManagementModal.classList.remove('flex');
+        });
+    }
 }
 
-// --- Initial Setup ---
 export function initializeUI() {
-    cacheDOMElements();
-
+    cacheDOMElements(); 
     elements.urlForm.addEventListener('submit', handleUrlFormSubmit);
     elements.searchInput.addEventListener('input', () => renderSidebar(db.getArticles(), {}));
     elements.surpriseMeBtn.addEventListener('click', handleSurpriseMe);
-
     setupDarkMode();
     setupViewToggle();
     setupReaderSettings();
