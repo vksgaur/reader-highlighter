@@ -11,89 +11,67 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .font-serif {
-            font-family: 'Lora', serif;
-        }
-        /* Custom scrollbar */
+        body { font-family: 'Inter', sans-serif; }
+        .font-serif { font-family: 'Lora', serif; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #e2e8f0; }
         .dark ::-webkit-scrollbar-track { background: #1e293b; }
         ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #64748b; }
-        
-        /* Highlight Styles */
         .highlight { cursor: pointer; position: relative; border-radius: 2px; padding: 0 2px; margin: 0 -2px; }
         .highlight-yellow { background-color: rgba(254, 240, 138, 0.6); }
         .highlight-pink   { background-color: rgba(244, 114, 182, 0.5); }
         .highlight-sky    { background-color: rgba(56, 189, 248, 0.5); }
         .highlight-green  { background-color: rgba(74, 222, 128, 0.5); }
-
         #highlight-tooltip, #edit-highlight-tooltip { position: fixed; display: none; z-index: 100; }
-        #highlights-modal, #add-note-modal, #confirm-modal { transition: opacity 0.3s ease; }
-
-        /* General dark mode prose styles (fallback) */
+        #highlights-modal, #add-note-modal, #confirm-modal, #tag-management-modal { transition: opacity 0.3s ease; }
         .dark .prose { color: #d1d5db; }
         .dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4, .dark .prose strong { color: #f9fafb; }
         .dark .prose a { color: #93c5fd; }
         .dark .prose blockquote { border-left-color: #4b5563; color: #9ca3af; }
-
-        /* Reader Theme Styles */
-        .theme-btn.active { border-color: #4f46e5; /* indigo-600 */ }
-
+        .theme-btn.active { border-color: #4f46e5; }
         #article-content-wrapper.theme-light { background-color: #ffffff; }
         #article-content-wrapper.theme-light .prose { color: #1f2937; }
         #article-content-wrapper.theme-light .prose h1, #article-content-wrapper.theme-light .prose strong { color: #111827; }
         #article-content-wrapper.theme-light .prose a { color: #2563eb; }
         #article-content-wrapper.theme-light .prose blockquote { border-left-color: #e5e7eb; color: #4b5563; }
-
         #article-content-wrapper.theme-sepia { background-color: #fbf0d9; }
         #article-content-wrapper.theme-sepia .prose { color: #5b4636; }
         #article-content-wrapper.theme-sepia .prose h1, #article-content-wrapper.theme-sepia .prose strong { color: #43302b; }
         #article-content-wrapper.theme-sepia .prose a { color: #8f5c43; }
         #article-content-wrapper.theme-sepia .prose blockquote { border-left-color: #dccfb6; color: #7d6b59; }
-
         #article-content-wrapper.theme-dark { background-color: #1f2937; }
         #article-content-wrapper.theme-dark .prose { color: #d1d5db; }
         #article-content-wrapper.theme-dark .prose h1, #article-content-wrapper.theme-dark .prose strong { color: #f9fafb; }
         #article-content-wrapper.theme-dark .prose a { color: #93c5fd; }
         #article-content-wrapper.theme-dark .prose blockquote { border-left-color: #4b5563; color: #9ca3af; }
-
         .favorite-btn .filled-star { display: none; }
         .favorite-btn.favorited .filled-star { display: block; }
         .favorite-btn.favorited .empty-star { display: none; }
-        
         #initial-loader { position: fixed; top: 0; left: 0; z-index: 9999; background-color: #f8fafc; }
         .dark #initial-loader { background-color: #020617; }
-        
         #app-view.sidebar-collapsed #sidebar { width: 0; padding-left: 0; padding-right: 0; border-right-width: 0; overflow: hidden; }
         #app-view.sidebar-collapsed #sidebar-toggle-icon { transform: rotate(180deg); }
-        
         #toast-notification { transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out; }
+        /* Style for color input to make it a small circle */
+        input[type="color"] { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border: none; border-radius: 50%; cursor: pointer; padding: 0; }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: 1px solid #94a3b8; border-radius: 50%; }
     </style>
 </head>
 <body class="dark:text-slate-200 bg-slate-50 dark:bg-slate-950">
 
     <!-- Toast Notification Container -->
     <div id="toast-notification" class="fixed top-0 right-0 left-0 md:left-auto md:top-5 md:right-5 p-4 max-w-sm w-full rounded-lg shadow-lg bg-red-500 text-white z-[9999] transform -translate-y-20 opacity-0" role="alert">
-        <div class="flex items-center">
-            <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <div>
-                <p id="toast-title" class="font-bold">Error</p>
-                <p id="toast-message" class="text-sm">Something went wrong.</p>
-            </div>
-        </div>
+        <div class="flex items-center"><svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg><div><p id="toast-title" class="font-bold">Error</p><p id="toast-message" class="text-sm">Something went wrong.</p></div></div>
     </div>
 
     <!-- Initial Loader -->
     <div id="initial-loader" class="h-screen w-screen flex flex-col items-center justify-center text-slate-600 dark:text-slate-300">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div>
-        <p>Loading...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mb-4"></div><p>Loading...</p>
     </div>
 
-    <!-- Login View (Hidden by default) -->
+    <!-- Login View -->
     <div id="login-view" class="h-screen w-screen flex items-center justify-center hidden">
         <div class="text-center p-4">
             <h1 class="text-4xl font-bold text-slate-800 dark:text-white mb-4">Read & Highlight</h1>
@@ -105,49 +83,71 @@
         </div>
     </div>
 
-    <!-- Main App View (Hidden by default) -->
+    <!-- Main App View -->
     <div id="app-view" class="flex h-screen overflow-hidden hidden">
         <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-80 bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-300 ease-in-out -translate-x-full md:relative md:translate-x-0 md:w-96">
-            <!-- Sidebar content -->
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-2xl font-bold text-slate-800 dark:text-white">Read & Highlight</h1>
+                    <button id="theme-toggle" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <svg id="theme-toggle-light-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <svg id="theme-toggle-dark-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                </div>
+                <div id="user-info" class="mt-3 text-sm text-slate-600 dark:text-slate-400 flex items-center"></div>
+            </div>
+            <div class="p-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                <input type="search" id="search-input" placeholder="Search articles..." class="w-full p-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-md">
+                <button id="surprise-me-btn" class="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700" title="Open a random article">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </button>
+                <!-- NEW: Manage Tags Button -->
+                <button id="manage-tags-btn" class="p-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700" title="Manage Tags">
+                    <svg class="w-6 h-6 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h2zm0 0V3m0 4v.01M17 17h.01M17 13h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2v-5a2 2 0 012-2h.01zm0 0V13m0 4v.01"></path></svg>
+                </button>
+            </div>
+            <div class="p-2 border-b border-slate-200 dark:border-slate-800">
+                <div id="view-toggle" class="flex w-full rounded-md bg-slate-200 dark:bg-slate-700 p-1">
+                    <button id="view-active-btn" class="px-3 py-1 text-sm font-semibold w-1/2 rounded-md">Active</button>
+                    <button id="view-archived-btn" class="px-3 py-1 text-sm font-semibold w-1/2 rounded-md">Archived</button>
+                </div>
+            </div>
+            <div id="tag-filters" class="p-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap gap-2"></div>
+            <div id="saved-articles-list" class="flex-grow overflow-y-auto p-2">
+                <div id="loader-sidebar" class="p-4 text-center text-slate-500 dark:text-slate-400">Loading articles...</div>
+            </div>
         </aside>
 
         <div id="sidebar-backdrop" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden"></div>
 
         <main id="main-content" class="flex-grow flex flex-col bg-slate-50 dark:bg-slate-950 relative">
-            <!-- Main content header -->
+            <button id="sidebar-toggle" class="hidden md:flex absolute top-1/2 -translate-y-1/2 -left-3 z-10 bg-white dark:bg-slate-700 border-2 border-slate-300 dark:border-slate-600 rounded-full w-6 h-6 items-center justify-center">
+                <svg id="sidebar-toggle-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
             <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex justify-between items-center mt-1">
                 <form id="url-form" class="flex-grow flex gap-2">
-                    <!-- Form content -->
+                    <button type="button" id="mobile-menu-btn" class="md:hidden p-3 -ml-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <input type="url" id="article-url" placeholder="Paste an article link here..." class="flex-grow p-3 border rounded-lg" required>
+                    <button type="submit" class="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 transition shadow">Fetch Article</button>
                 </form>
                 <div class="relative ml-4">
                     <button id="reader-settings-btn" class="p-3 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700">
                         <span class="font-serif text-xl">Aa</span>
                     </button>
                     <div id="reader-settings-menu" class="hidden absolute right-0 mt-2 w-56 bg-white dark:bg-slate-700 rounded-lg shadow-xl z-20 p-4">
-                        <!-- Reader settings content -->
-                        <!-- NEW: Theme selection -->
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-200">Theme</label>
-                            <div class="flex items-center justify-between mt-1 gap-2">
-                                <button data-theme="light" class="theme-btn h-8 w-1/3 rounded border-2 border-slate-300 bg-white" title="Light"></button>
-                                <button data-theme="sepia" class="theme-btn h-8 w-1/3 rounded border-2 border-slate-300" style="background-color: #fbf0d9;" title="Sepia"></button>
-                                <button data-theme="dark" class="theme-btn h-8 w-1/3 rounded border-2 border-slate-300" style="background-color: #1f2937;" title="Dark"></button>
-                            </div>
-                        </div>
+                        <!-- Reader Settings Menu Content -->
                     </div>
                 </div>
             </div>
             <div id="article-view" class="flex-grow overflow-y-auto p-8 md:p-12 lg:p-16">
-                <!-- **** THIS IS THE MODIFIED LINE **** -->
                 <div id="article-content-wrapper" class="w-full mx-auto p-8 md:p-12 rounded-lg shadow-lg transition-all duration-300">
                     <div id="placeholder" class="text-center text-slate-500 dark:text-slate-400">
                         <h2 class="text-2xl font-semibold mb-2">Welcome!</h2>
                         <p>Paste a link above to start reading, or select a saved article from the sidebar.</p>
                     </div>
-                    <div id="loader-main" class="hidden text-center text-slate-500 dark:text-slate-400">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-                        <p>Fetching and cleaning article...</p>
-                    </div>
+                    <div id="loader-main" class="hidden text-center"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div><p>Fetching and cleaning article...</p></div>
                     <article id="article-content" class="prose max-w-none"></article>
                 </div>
             </div>
@@ -155,7 +155,21 @@
     </div>
 
     <!-- Tooltips and Modals -->
-    
+    <!-- ... existing modals ... -->
+
+    <!-- NEW: Tag Management Modal -->
+    <div id="tag-management-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white dark:bg-slate-800 rounded-lg shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-800 dark:text-white">Manage Tags</h2>
+                <button id="close-tag-modal-btn" class="text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white text-2xl">&times;</button>
+            </div>
+            <div id="tag-management-list" class="p-4 overflow-y-auto space-y-2">
+                <!-- Tag management items will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./main.js"></script>
 </body>
 </html>
