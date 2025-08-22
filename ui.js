@@ -67,7 +67,6 @@ function cacheDOMElements() {
     };
 }
 
-
 // --- Main UI Rendering ---
 
 export function renderSidebar(allUserArticles, tagMetadata) {
@@ -108,187 +107,26 @@ export function renderSidebar(allUserArticles, tagMetadata) {
     });
 }
 
-function renderTagFilters(allUserArticles, tagMetadata) {
-    const viewableArticlesForTags = allUserArticles.filter(article => (article.isArchived || false) === isShowingArchived);
-    const allTags = new Set(viewableArticlesForTags.flatMap(article => article.tags || []));
-    elements.tagFiltersContainer.innerHTML = '';
-    
-    const allBtn = document.createElement('button');
-    allBtn.textContent = 'All';
-    allBtn.className = `px-2 py-1 text-xs rounded-md ${!activeTagFilter ? `bg-indigo-600 text-white` : 'bg-slate-200 dark:bg-slate-700'}`;
-    allBtn.onclick = () => {
-        activeTagFilter = null;
-        renderSidebar(db.getArticles(), db.getTagMetadata());
-    };
-    elements.tagFiltersContainer.appendChild(allBtn);
+// ... other functions like renderTagFilters, createArticleCard, etc. ...
 
-    allTags.forEach(tag => {
-        const tagBtn = document.createElement('button');
-        const tagColor = tagMetadata[tag]?.color || '#e2e8f0'; // default slate-200
-        tagBtn.className = `flex items-center px-2 py-1 text-xs rounded-md ${activeTagFilter === tag ? `bg-indigo-600 text-white` : 'bg-slate-200 dark:bg-slate-700'}`;
-        tagBtn.innerHTML = `<span class="w-3 h-3 rounded-full mr-2" style="background-color: ${tagColor}; display: inline-block;"></span>${tag}`;
-        tagBtn.onclick = () => {
-            activeTagFilter = tag;
-            renderSidebar(db.getArticles(), db.getTagMetadata());
-        };
-        elements.tagFiltersContainer.appendChild(tagBtn);
-    });
-}
-
-function createArticleCard(article, tagMetadata) {
-    const articleEl = document.createElement('div');
-    const isSelected = article.id === currentArticleId;
-    articleEl.className = `group p-4 m-1 rounded-lg border flex flex-col justify-between items-start transition-all duration-200 ${isSelected ? 'bg-indigo-50 dark:bg-slate-800 border-indigo-500' : 'bg-white dark:bg-slate-800/50 border-transparent'}`;
-    articleEl.dataset.id = article.id;
-    
-    const topRow = document.createElement('div');
-    topRow.className = 'w-full flex justify-between items-start';
-
-    const leftColumn = document.createElement('div');
-    leftColumn.className = 'flex-grow overflow-hidden mr-2';
-
-    const textContainer = document.createElement('div');
-    textContainer.className = 'cursor-pointer';
-    const readingTimeInfo = article.readingTime ? ` &bull; ${article.readingTime} min read` : '';
-    textContainer.innerHTML = `<h3 class="font-semibold text-slate-800 dark:text-slate-100 truncate">${article.title || 'Untitled Article'}</h3><p class="text-xs text-slate-500 dark:text-slate-400 truncate">${article.url}</p><p class="text-xs text-slate-400 dark:text-slate-500 mt-1">${readingTimeInfo}</p>`;
-    textContainer.addEventListener('click', () => loadArticle(article.id));
-    
-    leftColumn.appendChild(textContainer);
-
-    const rightColumn = document.createElement('div');
-    rightColumn.className = 'flex flex-col items-center flex-shrink-0 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity';
-
-    // ... (action buttons logic remains the same)
-
-    topRow.appendChild(leftColumn);
-    topRow.appendChild(rightColumn);
-    articleEl.appendChild(topRow);
-
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'mt-2 w-full flex items-center flex-wrap gap-2';
-    
-    (article.tags || []).forEach(tag => {
-        const tagEl = document.createElement('span');
-        const tagColor = tagMetadata[tag]?.color || '#94a3b8';
-        tagEl.className = 'flex items-center text-xs text-slate-600 dark:text-slate-300';
-        tagEl.innerHTML = `<span class="w-2 h-2 rounded-full mr-1.5" style="background-color: ${tagColor};"></span>${tag}`;
-        tagsContainer.appendChild(tagEl);
-    });
-
-    const addTagBtn = document.createElement('button');
-    addTagBtn.innerHTML = `<svg class="w-4 h-4 text-slate-400 hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>`;
-    addTagBtn.title = 'Add Tag';
-    addTagBtn.onclick = (e) => {
-        e.stopPropagation();
-        const input = e.currentTarget.nextElementSibling;
-        input.classList.toggle('hidden');
-        if (!input.classList.contains('hidden')) input.focus();
-    };
-
-    const addTagInput = document.createElement('input');
-    addTagInput.type = 'text';
-    addTagInput.placeholder = 'New tag...';
-    addTagInput.className = 'hidden ml-2 text-xs p-1 rounded bg-slate-200 dark:bg-slate-700';
-    addTagInput.onclick = e => e.stopPropagation();
-    addTagInput.onkeydown = async (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            if (e.target.value.trim()) {
-                await db.addTag(article.id, e.target.value);
-            }
-            e.target.value = '';
-            e.target.classList.add('hidden');
-        } else if (e.key === 'Escape') {
-            e.target.classList.add('hidden');
-        }
-    };
-
-    tagsContainer.appendChild(addTagBtn);
-    tagsContainer.appendChild(addTagInput);
-    articleEl.appendChild(tagsContainer);
-    
-    return articleEl;
-}
-
-
-// --- Tag Management Modal ---
-
-export function openTagManagementModal() {
-    const allTags = [...new Set(db.getArticles().flatMap(article => article.tags || []))].sort();
-    const tagMetadata = db.getTagMetadata();
-    elements.tagManagementList.innerHTML = '';
-
-    if (allTags.length === 0) {
-        elements.tagManagementList.innerHTML = `<p class="text-sm text-slate-500">No tags found. Add tags to your articles to manage them here.</p>`;
-    } else {
-        allTags.forEach(tag => {
-            const item = document.createElement('div');
-            item.className = 'flex items-center gap-3 p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700';
-            const currentColor = tagMetadata[tag]?.color || '#94a3b8';
-
-            item.innerHTML = `
-                <input type="color" value="${currentColor}" data-tag-name="${tag}" class="tag-color-picker flex-shrink-0">
-                <input type="text" value="${tag}" data-original-name="${tag}" class="tag-rename-input flex-grow bg-transparent p-1 rounded border border-transparent focus:border-indigo-500">
-                <button class="delete-tag-btn p-1 rounded hover:bg-red-100 dark:hover:bg-red-800" data-tag-name="${tag}" title="Delete Tag">
-                    <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            `;
-            elements.tagManagementList.appendChild(item);
-        });
-    }
-    elements.tagManagementModal.classList.remove('hidden');
-    elements.tagManagementModal.classList.add('flex');
-}
-
-function setupTagManagement() {
-    elements.manageTagsBtn.addEventListener('click', openTagManagementModal);
-    elements.closeTagModalBtn.addEventListener('click', () => {
-        elements.tagManagementModal.classList.add('hidden');
-        elements.tagManagementModal.classList.remove('flex');
-    });
-
-    elements.tagManagementList.addEventListener('change', async (e) => {
-        if (e.target.classList.contains('tag-color-picker')) {
-            const tagName = e.target.dataset.tagName;
-            const newColor = e.target.value;
-            await db.setTagColor(tagName, newColor);
-            showToast('Tag color updated!', 'Success', 'success');
-        }
-    });
-
-    elements.tagManagementList.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter' && e.target.classList.contains('tag-rename-input')) {
-            const oldName = e.target.dataset.originalName;
-            const newName = e.target.value.trim();
-            if (oldName !== newName && newName) {
-                await db.renameTag(oldName, newName);
-                showToast(`Tag "${oldName}" renamed to "${newName}".`, 'Success', 'success');
-            }
-            e.target.blur();
-        }
-    });
-
-    elements.tagManagementList.addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.delete-tag-btn');
-        if (deleteBtn) {
-            const tagName = deleteBtn.dataset.tagName;
-            const confirmed = await showConfirmation(`Delete "${tagName}"?`, 'This will remove the tag from all articles. This action cannot be undone.');
-            if (confirmed) {
-                await db.deleteTag(tagName);
-                showToast(`Tag "${tagName}" deleted.`, 'Success', 'success');
-            }
-        }
-    });
-}
+// --- ADDED THIS FUNCTION BACK ---
+export const clearUIForSignOut = () => {
+    if (!elements.savedArticlesList) return; // Guard in case this is called before UI is ready
+    elements.savedArticlesList.innerHTML = '<p class="p-4 text-sm text-slate-400 dark:text-slate-500">Please sign in to see your articles.</p>';
+    elements.articleContent.innerHTML = '';
+    elements.placeholder.style.display = 'block';
+    elements.loaderMain.style.display = 'none';
+    currentArticleId = null;
+    activeTagFilter = null;
+    isShowingArchived = false;
+};
 
 
 // --- Initial Setup ---
 
 export function initializeUI() {
-    // This function now runs AFTER the DOM is ready.
-    cacheDOMElements(); // First, cache all elements.
+    cacheDOMElements(); 
     
-    // Now, set up all the event listeners.
     elements.urlForm.addEventListener('submit', handleUrlFormSubmit);
     elements.searchInput.addEventListener('input', () => renderSidebar(db.getArticles(), db.getTagMetadata()));
     elements.surpriseMeBtn.addEventListener('click', handleSurpriseMe);
@@ -302,4 +140,4 @@ export function initializeUI() {
     setupTagManagement();
 }
 
-// ... all other functions (loadArticle, deleteArticle, etc.) remain the same
+// ... rest of the file remains the same ...
