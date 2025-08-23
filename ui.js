@@ -356,6 +356,7 @@ function normalizeHighlights(highlightId) {
         const current = highlights[i];
         const prev = highlights[i - 1];
 
+        // Check if they are siblings and adjacent
         if (prev.nextSibling === current) {
             prev.textContent += current.textContent;
             current.parentNode.removeChild(current);
@@ -366,21 +367,37 @@ function normalizeHighlights(highlightId) {
 
 /**
  * Gathers all highlight data from the DOM and saves it to Firestore.
+ * This version correctly groups fragmented highlights into single objects.
  */
 async function saveHighlights() {
     if (!currentArticleId) return;
 
     const highlightElements = elements.articleContent.querySelectorAll('mark.highlight');
-    const highlightsData = Array.from(highlightElements).map(el => ({
-        id: el.dataset.highlightId,
-        color: el.dataset.color,
-        note: el.dataset.note || '',
-        text: el.textContent,
-    }));
+    const highlightsMap = new Map();
 
+    // Group highlight fragments by their shared ID
+    highlightElements.forEach(el => {
+        const id = el.dataset.highlightId;
+        if (!highlightsMap.has(id)) {
+            highlightsMap.set(id, {
+                id: id,
+                color: el.dataset.color,
+                note: el.dataset.note || '',
+                text: el.textContent,
+            });
+        } else {
+            // This handles cases where a logical highlight consists of multiple <mark> tags.
+            // We append the text to maintain the full context of the highlight.
+            const existing = highlightsMap.get(id);
+            existing.text += el.textContent;
+        }
+    });
+
+    const highlightsData = Array.from(highlightsMap.values());
     const updatedContent = elements.articleContent.innerHTML;
     await db.saveHighlightsToDb(currentArticleId, updatedContent, highlightsData);
 }
+
 
 /**
  * Deletes a highlight element from the DOM and saves the changes.
@@ -581,8 +598,13 @@ function setupSidebarToggle() {
 }
 
 function setupHighlighting() {
+    // Show creation tooltip on text selection
     elements.articleContent.addEventListener('mouseup', (e) => {
-        if (e.target.closest('mark.highlight')) return;
+        // Don't show tooltip if we are clicking on an existing highlight or a button
+        if (e.target.closest('mark.highlight') || e.target.closest('button')) {
+            return;
+        }
+        
         const selection = window.getSelection();
         if (selection.toString().trim().length > 0) {
             currentSelection = selection.getRangeAt(0).cloneRange();
@@ -592,12 +614,19 @@ function setupHighlighting() {
         }
     });
 
+    // Hide tooltips when clicking away
     document.addEventListener('mousedown', (e) => {
         if (!elements.highlightTooltip.contains(e.target) && !elements.editHighlightTooltip.contains(e.target) && !e.target.closest('mark.highlight')) {
             hideTooltips();
         }
     });
 
+    // Prevent the tooltip buttons from stealing focus and collapsing the selection
+    elements.highlightTooltip.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+    });
+
+    // Handle clicks on the color buttons in the creation tooltip
     elements.highlightTooltip.addEventListener('click', (e) => {
         if (e.target.matches('.highlight-color-btn')) {
             const color = e.target.dataset.color;
@@ -605,6 +634,7 @@ function setupHighlighting() {
         }
     });
 
+    // Show edit tooltip when clicking an existing highlight
     elements.articleContent.addEventListener('click', (e) => {
         const highlightEl = e.target.closest('mark.highlight');
         if (highlightEl) {
